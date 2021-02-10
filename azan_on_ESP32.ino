@@ -322,6 +322,7 @@ void process_api_data()
 
 void fetch_It_Now()
 {
+  // get your area code and time format at api.azanpro.com
   client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
   int httpCode = client.GET();
   if (httpCode > 0)
