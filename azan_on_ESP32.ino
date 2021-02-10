@@ -111,7 +111,9 @@ void isItSolatTime(int prayerTime[], RtcDateTime &dt)
   {
     prayerTime[0] += 12;
   }
-
+/////////There are issues in this section
+//array printing produce erroneous result
+//suspect, something to do with array looping..
  for (byte i = 0; i < (sizeof(prayerTime)/sizeof(prayerTime[0])); i++)
   {
     if ((prayerTime[0] == dt.Hour() && (prayerTime[1] == dt.Minute())))
@@ -124,7 +126,7 @@ void isItSolatTime(int prayerTime[], RtcDateTime &dt)
       Serial.println("Not solat time yet");
     }
   }
-
+///////////////////////////
  }
 	
 //Breaking up character strings and convert to int of hours and minutes
