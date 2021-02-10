@@ -22,3 +22,12 @@ List of Hardware:
   9.4: Read Qurán, may be 10 minutes before solat time or read at any time selected.
   9.5: Improve ESP32 energy saving mode e.g. sleeping mode etc.
  
+ At time this writing you need to upgrade ESP32 arduino core to 1.05 (required by audio library) which is available at ESP developmental branch, otherwise the
+ code won't compile. Visit here how to do it:  https://github.com/espressif/arduino-esp32#installation-instructions
+ 
+ For audio file, download any azan audio file you prefer and convert them (using Audacity software or any online audio converter) to wav file. I have not tested
+ with other audio file format. Make sampling rate 16000 Hz and stereo. Save them on your SD card.
+ 
+ Disclaimer:
+ I am just a hobbyist with minimal knowledge on this technology, so don't give high expectation from me. If you would like to contribute to make this project a usable one,
+ then you are most welcome.
