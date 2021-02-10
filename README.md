@@ -21,3 +21,4 @@ List of Hardware:
   9.3: Volume control, both hardware and software.
   9.4: Read Qurán, may be 10 minutes before solat time or read at any time selected.
   9.5: Improve ESP32 energy saving mode e.g. sleeping mode etc.
+ 
