@@ -104,8 +104,7 @@ void timeIsNow(bool azanNow, int ndx)
 
 void isItSolatTime(int prayerTime[], RtcDateTime &dt)
 {
-  int solatHr = prayerTime[0];
-  int solatMin = prayerTime[1];
+  
   int solatIndex = prayerTime[2];
     
    if (dt.Hour() > 12)
@@ -115,7 +114,7 @@ void isItSolatTime(int prayerTime[], RtcDateTime &dt)
 
  for (byte i = 0; i < (sizeof(prayerTime)/sizeof(prayerTime[0])); i++)
   {
-    if ((solatHr == dt.Hour() && (solatMin == dt.Minute())))
+    if ((prayerTime[0] == dt.Hour() && (prayerTime[1] == dt.Minute())))
     {
       Serial.println("Solat time"); //for debugging
       timeIsNow(true, solatIndex);
