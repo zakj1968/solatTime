@@ -109,7 +109,7 @@ void isItSolatTime(int prayerTime[], RtcDateTime &dt)
     
    if (dt.Hour() > 12)
   {
-    solatHr += 12;
+    prayerTime[0] += 12;
   }
 
  for (byte i = 0; i < (sizeof(prayerTime)/sizeof(prayerTime[0])); i++)
