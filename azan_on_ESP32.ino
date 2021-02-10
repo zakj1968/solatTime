@@ -52,10 +52,10 @@ LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 
 void pinToCore()
 {
-  xTaskCreatePinnedToCore(playAzan, "Task1", 10000, NULL, 1, &Task1, 0);
+  xTaskCreatePinnedToCore(audioLoop, "Task1", 10000, NULL, 1, &Task1, 0);
 }
 
-void playAzan(void *pvParameters)
+void audioLoop(void *pvParameters)
 {
   vTaskDelay(10);
   for (;;)
@@ -94,6 +94,7 @@ void timeIsNow(bool azanNow, int ndx)
   {
     Serial.println("azanNow ");
     lcd.clear();
+    lcd.setCursor(2,2);
     lcd.print("Waktu Solat ");
     lcd.print(waktuSolat);
     audio.connecttoFS(SD, "/your_azan_file.wav");
@@ -107,15 +108,23 @@ void isItSolatTime(int prayerTime[], RtcDateTime &dt)
   int solatMin = prayerTime[1];
   int solatIndex = prayerTime[2];
     
-    if (dt.Hour()>12)
-    {
-      solatHr += 12;
-    }
-    
+   if (dt.Hour() > 12)
+  {
+    solatHr += 12;
+  }
+
+  for (solatIndex = 0; solatIndex < 6; solatIndex++)
+  {
     if ((solatHr == dt.Hour() && (solatMin == dt.Minute())))
     {
+      Serial.println("Solat time, solatIndex");
       timeIsNow(true, solatIndex);
     }
+    else
+    {
+      Serial.println("Not solat time yet");
+    }
+  }
 
  }
 	
