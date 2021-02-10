@@ -28,6 +28,8 @@ List of Hardware:
  For audio file, download any azan audio file you prefer and convert them (using Audacity software or any online audio converter) to wav file. I have not tested
  with other audio file format. Make sampling rate 16000 Hz and stereo. Save them on your SD card.
  
+ You may refer to code comments for hardware connection. I may find way to upload picture of it.
+ 
  Disclaimer:
- I am just a hobbyist with minimal knowledge on this technology, so don't give high expectation from me. If you would like to contribute to make this project a usable one,
+ I am just a hobbyist with minimal knowledge on this technology, so don't give high expectation from me. If you would like to contribute to make this project a more usable one,
  then you are most welcome.
