@@ -68,62 +68,94 @@ void audioLoop(void *pvParameters)
   }
 }
 
-void timeIsNow(bool azanNow, int ndx)
-{
-  char waktuSolat[9];
-  switch (ndx)
-  {
-  case 1:
-    strncpy(waktuSolat, "Subuh", sizeof(waktuSolat));
-    break;
-  case 2:
-    strncpy(waktuSolat, "Zohor", sizeof(waktuSolat));
-    break;
-  case 3:
-    strncpy(waktuSolat, "Asar", sizeof(waktuSolat));
-    break;
-  case 4:
-    strncpy(waktuSolat, "Maghrib", sizeof(waktuSolat));
-    break;
-  case 5:
-    strncpy(waktuSolat, "Isyak", sizeof(waktuSolat));
-    break;
-  }
-
-  if (azanNow)
-  {
-    Serial.println("azanNow ");
-    lcd.clear();
-    lcd.setCursor(2,2);
-    lcd.print("Waktu Solat ");
-    lcd.print(waktuSolat);
-    audio.connecttoFS(SD, "/your_azan_file.wav");
-  }
-  azanNow = false;
-}
-
-void isItSolatTime(int prayerTime[], RtcDateTime &dt)
+bool isItSolatTime(int prayerTime[], RtcDateTime &time)
 {
   
   int solatIndex = prayerTime[2];
     
-   if (dt.Hour() > 12)
+  switch (solatIndex)
+  {
+  case 0:
+  {
+
+    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
+    {
+      return true;
+    }
+    return false;
+  }
+  break;
+
+  case 1:
+  {
+
+    // to fire azan at 1 hour before subuh and at subuh
+    if (((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute())) || (prayerTime[0] - 1 == time.Hour()))
+    {
+      return true;
+    }
+    return false;
+  }
+  break;
+
+  case 2:
+  {
+
+    if (time.Hour() > 12)
+    {
+      prayerTime[0] += 12;
+    }
+
+    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
+    {
+      return true;
+    }
+    return false;
+  }
+  break;
+
+  case 3:
   {
     prayerTime[0] += 12;
+
+    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
+    {
+      return true;
+    }
+    return false;
   }
-	
- for (byte i = 0; i < (sizeof(prayerTime)/sizeof(prayerTime[0])); i++)
+  break;
+
+  case 4:
   {
-    if ((prayerTime[0] == dt.Hour() && (prayerTime[1] == dt.Minute())))
+    prayerTime[0] += 12;
+
+    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
     {
-      Serial.println("Solat time"); 
-      // timeIsNow(true, solatIndex); //For the time being, audio not triggered from this function call.
-      audio.connecttoFS(SD, "/your_azan_file.wav");
+
+      return true;
     }
-    else
+    return false;
+  }
+  break;
+
+  case 5:
+  {
+    prayerTime[0] += 12;
+
+    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
     {
-      Serial.println("Not solat time yet");
+
+      return true;
     }
+    return false;
+  }
+  break;
+
+  default:
+    Serial.println("Invalid Solat Index");
+    return false;
+    break;
   }
  }
 	
@@ -165,7 +197,14 @@ void reformatPrayerTime(char *prayerTime[], int arrLength)
     int HrMin_int[]={Hr_int,Min_int,ndx};
     RtcDateTime timeNow = Rtc.GetDateTime();
    
-    isItSolatTime(HrMin_int, timeNow);
+   if (isItSolatTime(HrMin_int, timeNow))
+    {
+      audio.connecttoFS(SD, "/your_azan_file.wav");
+    }
+    else
+    {
+      Serial.println("Not Solat Time yet");
+    }
   }
 }
 
