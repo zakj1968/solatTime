@@ -116,8 +116,9 @@ void isItSolatTime(int prayerTime[], RtcDateTime &dt)
   {
     if ((prayerTime[0] == dt.Hour() && (prayerTime[1] == dt.Minute())))
     {
-      Serial.println("Solat time"); //for debugging
-      timeIsNow(true, solatIndex);
+      Serial.println("Solat time"); 
+      // timeIsNow(true, solatIndex); //For the time being, audio not triggered from this function call.
+      audio.connecttoFS(SD, "/your_azan_file.wav");
     }
     else
     {
