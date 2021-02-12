@@ -22,6 +22,11 @@
 // to use second core - core 0
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
+///////Timer 
+volatile int tCounter;
+hw_timer_t *timer = NULL; 
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
 
 // SD card pins
 #define SD_CS 5
@@ -37,6 +42,7 @@ TaskHandle_t Task1; // Core 0 task
 Audio audio;
 RtcDS3231<TwoWire> Rtc(Wire);
 
+
 const char *ssid = "your ssid";
 const char *password = "your password";
 int counter = 0;
@@ -49,6 +55,14 @@ HTTPClient client;
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+
+//Interrupt service routine for timer
+void IRAM_ATTR onTime()
+{
+  portENTER_CRITICAL_ISR(&timerMux);
+  tCounter++;
+  portEXIT_CRITICAL_ISR(&timerMux);
+}
 
 void pinToCore()
 {
@@ -429,12 +443,23 @@ void setup()
   //start_lcd();
   lcd.init();
   lcd.backlight();
+  timer = timerBegin(0, 80, true);
+  timerAttachInterrupt(timer, &onTime, true);
+  timerAlarmWrite(timer, 2000000, true); // 2 seconds
+  timerAlarmEnable(timer);
 
   audio_SD_setup();
 }
 
 void loop()
 {
+   if (tCounter > 0)
+  {
+    portENTER_CRITICAL(&timerMux);
+    tCounter--;
+    portEXIT_CRITICAL(&timerMux);
+    pushData(); //Not yet completed
+  }
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
   if ((WiFi.status() != WL_CONNECTED))
