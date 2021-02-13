@@ -26,6 +26,8 @@ List of Hardware:
  For audio file, download any azan audio file you prefer and convert them (using Audacity software or any online audio converter) to wav file. I have not tested
  with other audio file format. Make sampling rate 16000 Hz and stereo. Save them on your SD card.
  
+ Note: Issue in WiKi.
+ 
 <img width="411" alt="solatTime" src="https://user-images.githubusercontent.com/78830805/107587834-7532cb00-6c3d-11eb-9ca3-d12b0ef0e7d6.png">
  
 Disclaimer:
