@@ -295,7 +295,7 @@ void audio_SD_setup()
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(20); // 0...21
 }
-void process_api_data()
+void process_api_data(String payload)
 {
 
   //String payload = client.getString();
@@ -325,27 +325,27 @@ void process_api_data()
   lcd.setCursor(0, 1);
   lcd.print("I "); //Imsak
   lcd.setCursor(2, 1);
-  lcd.print(imsak_t);
+  lcd.print(imsak);
   lcd.setCursor(10, 1);
   lcd.print("S "); //Subuh
   lcd.setCursor(12, 1);
-  lcd.print(subuh_t);
+  lcd.print(subuh);
   lcd.setCursor(0, 2);
   lcd.print("Z "); //Zohor
   lcd.setCursor(2, 2);
-  lcd.print(zohor_t);
+  lcd.print(zohor);
   lcd.setCursor(10, 2);
   lcd.print("A "); //Asar
   lcd.setCursor(12, 2);
-  lcd.print(asar_t);
+  lcd.print(asar);
   lcd.setCursor(0, 3);
   lcd.print("M "); //Maghrib
   lcd.setCursor(2, 3);
-  lcd.print(maghrib_t);
+  lcd.print(maghrib);
   lcd.setCursor(10, 3);
   lcd.print("I "); //Isyak
   lcd.setCursor(12, 3);
-  lcd.print(isyak_t);
+  lcd.print(isyak);
 	
    //char date_t[10];
   char imsak_t[8];
@@ -426,12 +426,9 @@ void getApiData()
     int httpCode = client.GET();
     if (httpCode > 0)
     {
-      if (timeElapsed > interval)
-      {
         String payload = client.getString();
         payload.replace(" ", "");
         process_api_data(payload);
-      }
     }
     else
     {
@@ -446,8 +443,6 @@ void getApiData()
   {
     //fetch_It_Now();
   }
-}
-
 }
 
 void setup()
@@ -506,7 +501,7 @@ void loop()
   counter = 0;
   if ((WiFi.status() == WL_CONNECTED))
   {
-    get_api_data();
+    getApiData();
   }
   client.end();
   delay(2000);
