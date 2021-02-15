@@ -22,11 +22,6 @@
 // to use second core - core 0
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
-///////Timer 
-volatile int tCounter;
-hw_timer_t *timer = NULL; 
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-
 
 // SD card pins
 #define SD_CS 5
@@ -55,14 +50,6 @@ HTTPClient client;
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
-
-//Interrupt service routine for timer
-void IRAM_ATTR onTime()
-{
-  portENTER_CRITICAL_ISR(&timerMux);
-  tCounter++;
-  portEXIT_CRITICAL_ISR(&timerMux);
-}
 
 void pinToCore()
 {
@@ -311,7 +298,7 @@ void audio_SD_setup()
 void process_api_data()
 {
 
-  String payload = client.getString();
+  //String payload = client.getString();
   payload.replace(" ", "");
 
   //Serial.println(payload);
@@ -334,22 +321,6 @@ void process_api_data()
   const char *asar = doc["prayer_times"]["asar"];
   const char *maghrib = doc["prayer_times"]["maghrib"];
   const char *isyak = doc["prayer_times"]["isyak"];
-
-  //char date_t[10];
-  char imsak_t[8];
-  char subuh_t[8];
-  char zohor_t[8];
-  char asar_t[8];
-  char maghrib_t[8];
-  char isyak_t[8];
-
-  //strcpy(date_t,date);
-  strcpy(imsak_t, imsak);
-  strcpy(subuh_t, subuh);
-  strcpy(zohor_t, zohor);
-  strcpy(asar_t, asar);
-  strcpy(maghrib_t, maghrib);
-  strcpy(isyak_t, isyak);
 
   lcd.setCursor(0, 1);
   lcd.print("I "); //Imsak
@@ -375,41 +346,108 @@ void process_api_data()
   lcd.print("I "); //Isyak
   lcd.setCursor(12, 3);
   lcd.print(isyak_t);
+	
+   //char date_t[10];
+  char imsak_t[8];
+  char subuh_t[8];
+  char zohor_t[8];
+  char asar_t[8];
+  char maghrib_t[8];
+  char isyak_t[8];
+
+  //strcpy(date_t,date);
+  strcpy(imsak_t, imsak);
+  strcpy(subuh_t, subuh);
+  strcpy(zohor_t, zohor);
+  strcpy(asar_t, asar);
+  strcpy(maghrib_t, maghrib);
+  strcpy(isyak_t, isyak);
 
   char *prayertimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
 
-  reformatPrayerTime(prayertimeArr, 6);
-}
+   const int rows = 6;
+   const int cols = 3;
+   
+   int HrMin2DArr[rows][cols];
+   int *p;
+   p = &HrMin2DArr[0][0];
+  
+  for (int i = 0; i < 6; i++)
+  {
 
-void fetch_It_Now()
-{
-  // get your area code and time format at api.azanpro.com
-  client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
-  int httpCode = client.GET();
-  if (httpCode > 0)
-  {
-    process_api_data();
+    char *arr = prayertimeArr[i];
+
+    byte length = strlen(arr);
+
+    if (length)
+    {
+      arr[length - 2] = '\0';
+    }
+    char *ptr = NULL;
+    char *newCharStr[4];
+    byte index = 0;
+
+    ptr = strtok(arr, ":");
+
+    while (ptr != NULL)
+    {
+      newCharStr[index] = ptr;
+      index++;
+      ptr = strtok(NULL, " ");
+    }
+
+    char *HrChar = newCharStr[0];
+    char *MinChar = newCharStr[1];
+    int Hr_int = atoi(HrChar);
+    int Min_int = atoi(MinChar);
+    int ndx = i; // 0=imsak,1=subuh,2=zohor,3=asar,4=maghrib,5=isyak
+
+    int HrMin_int[] = {Hr_int, Min_int, ndx};
+
+      for (int j = 0; j < cols; j++)
+      {
+        
+        HrMin2DArr[i][j] = HrMin_int[j];
+        HrMin2DArr[i][j] = '\0';
+        HrMin2DArr[i][j] += HrMin_int[j];
+         
+     Serial.println(HrMin2DArr[i][j]);
+      }
   }
-  else
-  {
-    Serial.println("Error on HTTP request");
-  }
+  Serial.println();
 }
-// Very frequent API fetches cause HTTPClient to crash, so I decided to fetch only twice in 24 hours.
-void get_api_data()
+void getApiData()
 {
 
-  if (api_fetch_once) //get the first, once, API fetch
+  if (api_fetch_once)
   {
-    fetch_It_Now();
+
+    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    int httpCode = client.GET();
+    if (httpCode > 0)
+    {
+      if (timeElapsed > interval)
+      {
+        String payload = client.getString();
+        payload.replace(" ", "");
+        process_api_data(payload);
+      }
+    }
+    else
+    {
+      Serial.println("Error on HTTP request");
+    }
+
     api_fetch_once = false;
   }
-  // then fetch at 1:00 am and 12.15 pm
+
   RtcDateTime timeNow = Rtc.GetDateTime();
   if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
   {
-    fetch_It_Now();
+    //fetch_It_Now();
   }
+}
+
 }
 
 void setup()
@@ -440,31 +478,19 @@ void setup()
   timeClient.setTimeOffset(28800);
   timeClient.update();
   RTC_Update();
-  //start_lcd();
+ 
   lcd.init();
   lcd.backlight();
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTime, true);
-  timerAlarmWrite(timer, 2000000, true); // 2 seconds
-  timerAlarmEnable(timer);
-
   audio_SD_setup();
 }
 
 void loop()
 {
-   if (tCounter > 0)
-  {
-    portENTER_CRITICAL(&timerMux);
-    tCounter--;
-    portEXIT_CRITICAL(&timerMux);
-    pushData(); //Not yet completed
-  }
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
   if ((WiFi.status() != WL_CONNECTED))
   {
-    // counter = 0; //reset counter
+   
     WiFi.begin(ssid, password);
   }
   while (WiFi.status() != WL_CONNECTED)
