@@ -42,6 +42,10 @@ const char *ssid = "your ssid";
 const char *password = "your password";
 int counter = 0;
 bool api_fetch_once = true;
+bool newData = false; //for checking API
+volatile int intCounter;
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
@@ -50,6 +54,12 @@ HTTPClient client;
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+
+void IRAM_ATTR onTime() {
+   portENTER_CRITICAL_ISR(&timerMux);
+   intCounter++;
+   portEXIT_CRITICAL_ISR(&timerMux);
+}
 
 void pinToCore()
 {
@@ -477,12 +487,23 @@ void setup()
   lcd.init();
   lcd.backlight();
   audio_SD_setup();
+  timer = timerBegin(0, 80, true);                
+  timerAttachInterrupt(timer, &onTime, true);    
+  timerAlarmWrite(timer, 3000000, true);  //Every 3 seconds         
+  timerAlarmEnable(timer);
 }
 
 void loop()
 {
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
+  if (intCounter >0)
+  {
+    portENTER_CRITICAL(&timerMux);
+       intCounter--;
+    portEXIT_CRITICAL(&timerMux);
+      getApiData();
+  }
   if ((WiFi.status() != WL_CONNECTED))
   {
    
