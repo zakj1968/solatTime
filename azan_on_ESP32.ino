@@ -32,8 +32,8 @@ Audio audio;
 RtcDS3231<TwoWire> Rtc(Wire);
 
 
-const char *ssid = "sweetHomePM@unifi";
-const char *password = "s3ntr487oo";
+const char *ssid = "your wifi ssid";
+const char *password = "your wifi password";
 int counter = 0;
 
 WiFiUDP ntpUDP;
