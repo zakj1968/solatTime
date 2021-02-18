@@ -375,7 +375,7 @@ void process_api_data(String payload)
 	int HrMinArr[] = {Hr_int,Min_int,ndx};	
 	dataPool(HrMinArr);    
 }
-oid dataPool(int prayerTime[3])
+void dataPool(int prayerTime[3])
 {
  
  int i,j;
