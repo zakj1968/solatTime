@@ -37,19 +37,27 @@ TaskHandle_t Task1; // Core 0 task
 Audio audio;
 RtcDS3231<TwoWire> Rtc(Wire);
 
-
 const char *ssid = "your ssid";
 const char *password = "your password";
+
 int counter = 0;
-bool api_fetch_once = true;
-bool newData = false; //for checking API
-volatile int intCounter;
-hw_timer_t * timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 HTTPClient client;
+
+const uint8_t lcdColumns = 20;
+const uint8_t lcdRows = 4;
+LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows)
+
+volatile int intCounter;
+bool fetchOnce = true;
+bool pushData = false;
+bool solatNow = false;
+int solatIndex = 0;
+	
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
@@ -79,145 +87,108 @@ void audioLoop(void *pvParameters)
   }
 }
 
-bool isItSolatTime(int prayerTime[], RtcDateTime &time)
+void showMessage(char message[])
+{
+	char waktuSolat[9];
+	strncpy(waktuSolat,message,sizeof(message));
+	lcd.clear();
+    lcd.setCursor(2,2);
+    lcd.print("Waktu Solat ");
+    lcd.print(waktuSolat);
+}
+void azanNow()
+{
+	char message[9];
+	solatIndex = 0;
+	switch (solatIndex)
+	{
+		case 1: 
+		{
+			showMessage("Subuh");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
+		}
+			break;
+		case 2:
+		{
+			showMessage("Zohor");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
+		}
+		break;
+		case 3:
+		{
+			showMessage("Asar");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
+		}
+		break;
+		case 4:
+		{
+			showMessage("Maghrib");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
+		}
+		break;
+		case 5:
+		{
+			showMessage("Isyak");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
+		}
+		break;		
+		default:
+		Serial.println("Invalid index");
+		break;
+	}	
+}
+void timeToSolat(int prayerTime[][3], RtcDateTime &time)
 {
   
-  int solatIndex = prayerTime[2];
-    
-  switch (solatIndex)
+  int subuhIndex = prayerTime[1][2];
+  int zohorIndex = prayerTime[2][2];
+  int asarIndex = prayerTime[3][2];
+  int maghribIndex = prayerTime[4][2];
+  int isyakIndex = prayerTime[5][2];
+  
+  if (solatIndex == subuhIndex) //solatIndex a global variable.
   {
-  case 0:
-  {
-
-    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
-    {
-      return true;
-    }
-    return false;
-  }
-  break;
-
-  case 1:
-  {
-
-    // to fire azan at 1 hour before subuh and at subuh
-    if (((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute())) || (prayerTime[0] - 1 == time.Hour()))
-    {
-      return true;
-    }
-    return false;
-  }
-  break;
-
-  case 2:
-  {
-
-    if (time.Hour() > 12)
-    {
-      prayerTime[0] += 12;
-    }
-
-    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
-    {
-      return true;
-    }
-    return false;
-  }
-  break;
-
-  case 3:
-  {
-    prayerTime[0] += 12;
-
-    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
-    {
-      return true;
-    }
-    return false;
-  }
-  break;
-
-  case 4:
-  {
-    prayerTime[0] += 12;
-
-    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
-    {
-
-      return true;
-    }
-    return false;
-  }
-  break;
-
-  case 5:
-  {
-    prayerTime[0] += 12;
-
-    if ((prayerTime[0] == time.Hour()) && (prayerTime[1] == time.Minute()))
-    {
-
-      return true;
-    }
-    return false;
-  }
-  break;
-
-  default:
-    Serial.println("Invalid Solat Index");
-    return false;
-    break;
-  }
+	  if (((prayerTime[1][0] == time.Hour()) && (prayerTime[1][1] == time.Minute())) || (prayerTime[1][0] - 1 == time.Hour()))
+	  {
+		  solatIndex = 1;
+		  azanNow();
+	  }
+	  
+  }else if (solatIndex == zohorIndex){
+	  if (time.Hour() > 12)
+		{
+			prayerTime[2][0] += 12;
+		}
+	  if ((prayerTime[2][0] == time.Hour()) && (prayerTime[2][1] == time.Minute()))
+	  {
+		   azanNow();
+	  }
+	  
+  }else if (solatIndex == asarIndex){
+	  prayerTime[3][0] += 12;
+	  if ((prayerTime[3][0] == time.Hour()) && (prayerTime[3][1] == time.Minute()))
+	  {
+		  azanNow();
+	  }
+		  
+  }else if (solatIndex == maghribIndex){
+	  prayerTime[4][0] += 12;
+	  if ((prayerTime[4][0] == time.Hour()) && (prayerTime[4][1] == time.Minute()))
+	  {
+		  azanNow();
+	  }
+	  
+  }else if (solatIndex == isyakIndex){
+	  prayerTime[5][0] += 12;
+	  if ((prayerTime[5][0] == time.Hour()) && (prayerTime[5][1] == time.Minute()))
+	  {
+		   azanNow();
+	  }
+	  
+  }else{
+	  Serial.println("Invalid Solat Index");
+  } 
  }
-	
-//Breaking up character strings and convert to int of hours and minutes
-void reformatPrayerTime(char *prayerTime[], int arrLength)
-{
-
-  for (int i = 0; i < arrLength; i++)
-  {
-    int ndx = i; // 0=imsak,1=subuh,2=zohor,3=asar,4=maghrib,5=isyak
-    char *arr = prayerTime[i];
-
-    byte length = strlen(arr);
-
-    if (length)
-    {
-      arr[length - 2] = '\0';
-    }
-    
-    char *ptr = NULL;
-    char *newCharStr[4];
-    byte index = 0;
-
-    ptr = strtok(arr, ":"); 
-
-    while (ptr != NULL) 
-    {
-      newCharStr[index] = ptr;
-      index++;
-      ptr = strtok(NULL, " ");
-    }
-    
-    char *HrChar = newCharStr[0];
-    char *MinChar = newCharStr[1];
-    //Convert them to int and assemble into array
-    int Hr_int = atoi(HrChar);
-    int Min_int = atoi(MinChar);
-    
-    int HrMin_int[]={Hr_int,Min_int,ndx};
-    RtcDateTime timeNow = Rtc.GetDateTime();
-   
-   if (isItSolatTime(HrMin_int, timeNow))
-    {
-      audio.connecttoFS(SD, "/your_azan_file.wav");
-    }
-    else
-    {
-      Serial.println("Not Solat Time yet");
-    }
-  }
-}
 
 void printDateTime(const RtcDateTime &dt)
 {
@@ -307,11 +278,7 @@ void audio_SD_setup()
 }
 void process_api_data(String payload)
 {
-
-  //String payload = client.getString();
   payload.replace(" ", "");
-
-  //Serial.println(payload);
 
   StaticJsonDocument<550> doc;
 
@@ -372,20 +339,13 @@ void process_api_data(String payload)
   strcpy(asar_t, asar);
   strcpy(maghrib_t, maghrib);
   strcpy(isyak_t, isyak);
-
-  char *prayertimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
-
-   const int rows = 6;
-   const int cols = 3;
-   
-   int HrMin2DArr[rows][cols];
-   int *p;
-   p = &HrMin2DArr[0][0];
+	
+  char *prTimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
+  int i,j;
   
-  for (int i = 0; i < 6; i++)
-  {
-
-    char *arr = prayertimeArr[i];
+ for (int i = 0; i < 6; i++)
+ {
+	char *arr = prTimeArr[i];
 
     byte length = strlen(arr);
 
@@ -411,50 +371,94 @@ void process_api_data(String payload)
     int Hr_int = atoi(HrChar);
     int Min_int = atoi(MinChar);
     int ndx = i; // 0=imsak,1=subuh,2=zohor,3=asar,4=maghrib,5=isyak
-
-    int HrMin_int[] = {Hr_int, Min_int, ndx};
-
-      for (int j = 0; j < cols; j++)
-      {
-        
-        HrMin2DArr[i][j] = HrMin_int[j];
-        HrMin2DArr[i][j] = '\0';
-        HrMin2DArr[i][j] += HrMin_int[j];
-         
-     Serial.println(HrMin2DArr[i][j]);
-      }
-  }
-  Serial.println();
+	
+	int HrMinArr[] = {Hr_int,Min_int,ndx};	
+	dataPool(HrMinArr);    
 }
+oid dataPool(int prayerTime[3])
+{
+ 
+ int i,j;
+ int allPrArr[6][3];
+ RtcDateTime now = Rtc.GetDateTime();
+for (i = 0; i<6;i++)
+{
+ for (j=0; j<3; j++)
+ {
+	allPrArr[i][j] = prayerTime[j];
+	allPrArr[i][j] +='\0';	
+ }
+ 
+ }
+ 
+ if (pushData)
+ {
+	
+	do {
+		int imHr = allPrArr[0][0];
+		int imMin = allPrArr[0][1];
+		int imNdx = allPrArr[0][2];
+ 
+		int suHr = allPrArr[1][0];
+		int suMin = allPrArr[1][1];
+		int suNdx = allPrArr[1][2];
+ 
+		int zoHr = allPrArr[2][0];
+		int zoMin = allPrArr[2][1];
+		int zoNdx = allPrArr[2][2];
+ 
+		int asHr = allPrArr[3][0];
+		int asMin = allPrArr[3][1];
+		int asNdx = allPrArr[3][2];
+ 
+		int maHr = allPrArr[4][0];
+		int maMin = allPrArr[4][1];
+		int maNdx = allPrArr[4][2];
+ 
+		int isHr = allPrArr[5][0];
+		int isMin = allPrArr[5][1];
+		int isNdx = allPrArr[5][2];
+		
+		int prTime[6][3] = {{imHr,imMin,imNdx},{suHr,suMin,suNdx},{zoHr,zoMin,zoNdx},
+			                {asHr,asMin,asNdx},{maHr,maMin,maNdx},{isHr,isMin,isNdx}};
+		
+		timeToSolat(prTime,now);
+				        		
+	} while (pushData);	
+	pushData = false;
+ }
+ 
+}
+	
 void getApiData()
 {
-
-  if (api_fetch_once)
-  {
-
-    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
-    int httpCode = client.GET();
-    if (httpCode > 0)
-    {
-        String payload = client.getString();
-        payload.replace(" ", "");
-        process_api_data(payload);
-    }
-    else
-    {
-      Serial.println("Error on HTTP request");
-    }
-
-    api_fetch_once = false;
+ if (fetchOnce) //fetch when rebooting or else fetch at specified time
+  {  
+	fetchDataNow();
+    fetchOnce = false;
   }
 
   RtcDateTime timeNow = Rtc.GetDateTime();
   if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
   {
-    //fetch_It_Now();
-  }
+    fetchDataNow();
+  } 
 }
-
+void fetchDataNow()
+{
+	client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    int httpCode = client.GET();
+    if (httpCode > 0)
+    {
+        String payload = client.getString();
+        payload.replace(" ", "");
+        processApiData(payload);
+    }
+    else
+    {
+      Serial.println("Error on HTTP request");
+    }
+}
 void setup()
 {
   Serial.begin(115200);
@@ -503,6 +507,7 @@ void loop()
        intCounter--;
     portEXIT_CRITICAL(&timerMux);
       getApiData();
+      pushData = true;
   }
   if ((WiFi.status() != WL_CONNECTED))
   {
@@ -514,7 +519,7 @@ void loop()
     delay(500);
     Serial.print(".");
     counter++;
-    if (counter >= 120) // about 120 seconds, then restart
+    if (counter >= 120) 
     {
       ESP.restart();
     }
