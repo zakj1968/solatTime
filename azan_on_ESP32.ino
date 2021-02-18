@@ -77,12 +77,12 @@ void audioLoop(void *pvParameters)
 }
 void showMessage(char message[])
 {
-	char waktuSolat[9];
-	strncpy(waktuSolat,message,sizeof(message));
-	lcd.clear();
-    lcd.setCursor(2,2);
-    lcd.print("Waktu Solat ");
-    lcd.print(waktuSolat);
+ char waktuSolat[9];
+ strncpy(waktuSolat,message,sizeof(message));
+ lcd.clear();
+ lcd.setCursor(2,2);
+ lcd.print("Waktu Solat ");
+ lcd.print(waktuSolat);
 }
 void azanNow()
 {
@@ -93,31 +93,31 @@ void azanNow()
 		case 1: 
 		{
 			showMessage("Subuh");
-			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
 		}
 			break;
 		case 2:
 		{
 			showMessage("Zohor");
-			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
 		}
 		break;
 		case 3:
 		{
 			showMessage("Asar");
-			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
 		}
 		break;
 		case 4:
 		{
 			showMessage("Maghrib");
-			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
 		}
 		break;
 		case 5:
 		{
 			showMessage("Isyak");
-			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
+			audio.connecttoFS(SD, "/your_azan_file.wav");
 		}
 		break;		
 		default:
@@ -338,7 +338,6 @@ void processApiData(String payload)
   
   for ( i = 0; i < 6; i++) //row processing
   {
-
     char *arr = prTimeArr[i];
 
     byte length = strlen(arr);
@@ -367,13 +366,10 @@ void processApiData(String payload)
     int ndx = i; // 0=imsak,1=subuh,2=zohor,3=asar,4=maghrib,5=isyak
 	
 	int HrMinArr[] = {Hr_int,Min_int,ndx};
-	
-	dataPool(HrMinArr);
-      
+	dataPool(HrMinArr);     
   }
   
 }
-///////////////////15/2/2021
 void dataPool(int prayerTime[3])
 {
  
@@ -426,7 +422,6 @@ for (i = 0; i<6;i++)
 	} while (pushData);	
 	pushData = false;
  }
- 
 }
 void getApiData()
 {	
@@ -444,7 +439,7 @@ void getApiData()
 }
 void fetchDataNow()
 {
-	client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
     int httpCode = client.GET();
     if (httpCode > 0)
     {
@@ -472,7 +467,7 @@ void setup()
     Serial.print(".");
     counter++;
     if (counter >= 120)
-    { //after 120 seconds timeout - reset board
+    { 
       Serial.println("Restart the board");
       ESP.restart();
     }
@@ -508,11 +503,8 @@ void loop()
        intCounter--;
       portEXIT_CRITICAL(&timerMux);
       Serial.println("Timer working");
-      ///////
       getApiData(); 
-      pushData = true;
-      //////
-      
+      pushData = true;   
   }
   if ((WiFi.status() != WL_CONNECTED))
   {
