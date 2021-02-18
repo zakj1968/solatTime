@@ -1,10 +1,4 @@
 
-//Attention:
-//1.At time this code written ESP32 arduino core was at version 1.04. You need to upgrade it to version 1.05 from development
-//branch, otherwise your code won't compile.
-// Visit here how to do it: https://github.com/espressif/arduino-esp32#installation-instructions
-//2.Only tested on audio wav format (sampling rate 16000 Hz, stereo).
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h> // https://arduinojson.org/?utm_source=meta&utm_medium=library.properties
@@ -32,14 +26,14 @@
 #define I2S_DOUT 25
 #define I2S_BCLK 27
 #define I2S_LRC 26
-/////////////////
+
 TaskHandle_t Task1; // Core 0 task
 Audio audio;
 RtcDS3231<TwoWire> Rtc(Wire);
 
-const char *ssid = "your ssid";
-const char *password = "your password";
 
+const char *ssid = "sweetHomePM@unifi";
+const char *password = "s3ntr487oo";
 int counter = 0;
 
 WiFiUDP ntpUDP;
@@ -48,20 +42,15 @@ HTTPClient client;
 
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
-LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows)
+LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 
 volatile int intCounter;
 bool fetchOnce = true;
 bool pushData = false;
 bool solatNow = false;
 int solatIndex = 0;
-	
 hw_timer_t * timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-
-const uint8_t lcdColumns = 20;
-const uint8_t lcdRows = 4;
-LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 
 void IRAM_ATTR onTime() {
    portENTER_CRITICAL_ISR(&timerMux);
@@ -86,7 +75,6 @@ void audioLoop(void *pvParameters)
                   // may not function properly.
   }
 }
-
 void showMessage(char message[])
 {
 	char waktuSolat[9];
@@ -105,31 +93,31 @@ void azanNow()
 		case 1: 
 		{
 			showMessage("Subuh");
-			audio.connecttoFS(SD, "/your_azan_file.wav");
+			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
 		}
 			break;
 		case 2:
 		{
 			showMessage("Zohor");
-			audio.connecttoFS(SD, "/your_azan_file.wav");
+			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
 		}
 		break;
 		case 3:
 		{
 			showMessage("Asar");
-			audio.connecttoFS(SD, "/your_azan_file.wav");
+			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
 		}
 		break;
 		case 4:
 		{
 			showMessage("Maghrib");
-			audio.connecttoFS(SD, "/your_azan_file.wav");
+			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
 		}
 		break;
 		case 5:
 		{
 			showMessage("Isyak");
-			audio.connecttoFS(SD, "/your_azan_file.wav");
+			audio.connecttoFS(SD, "/azan_mekah2_stereo.wav");
 		}
 		break;		
 		default:
@@ -137,6 +125,7 @@ void azanNow()
 		break;
 	}	
 }
+
 void timeToSolat(int prayerTime[][3], RtcDateTime &time)
 {
   
@@ -187,9 +176,10 @@ void timeToSolat(int prayerTime[][3], RtcDateTime &time)
 	  
   }else{
 	  Serial.println("Invalid Solat Index");
-  } 
+  }
+  
  }
-
+ 
 void printDateTime(const RtcDateTime &dt)
 {
   char datestring[11];
@@ -276,9 +266,12 @@ void audio_SD_setup()
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(20); // 0...21
 }
-void process_api_data(String payload)
+void processApiData(String payload)
 {
+
   payload.replace(" ", "");
+
+  //Serial.println(payload);
 
   StaticJsonDocument<550> doc;
 
@@ -298,7 +291,7 @@ void process_api_data(String payload)
   const char *asar = doc["prayer_times"]["asar"];
   const char *maghrib = doc["prayer_times"]["maghrib"];
   const char *isyak = doc["prayer_times"]["isyak"];
-
+  
   lcd.setCursor(0, 1);
   lcd.print("I "); //Imsak
   lcd.setCursor(2, 1);
@@ -339,13 +332,14 @@ void process_api_data(String payload)
   strcpy(asar_t, asar);
   strcpy(maghrib_t, maghrib);
   strcpy(isyak_t, isyak);
-	
+
   char *prTimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
   int i,j;
   
- for (int i = 0; i < 6; i++)
- {
-	char *arr = prTimeArr[i];
+  for ( i = 0; i < 6; i++) //row processing
+  {
+
+    char *arr = prTimeArr[i];
 
     byte length = strlen(arr);
 
@@ -372,9 +366,14 @@ void process_api_data(String payload)
     int Min_int = atoi(MinChar);
     int ndx = i; // 0=imsak,1=subuh,2=zohor,3=asar,4=maghrib,5=isyak
 	
-	int HrMinArr[] = {Hr_int,Min_int,ndx};	
-	dataPool(HrMinArr);    
+	int HrMinArr[] = {Hr_int,Min_int,ndx};
+	
+	dataPool(HrMinArr);
+      
+  }
+  
 }
+///////////////////15/2/2021
 void dataPool(int prayerTime[3])
 {
  
@@ -429,10 +428,9 @@ for (i = 0; i<6;i++)
  }
  
 }
-	
 void getApiData()
-{
- if (fetchOnce) //fetch when rebooting or else fetch at specified time
+{	
+  if (fetchOnce) //fetch when rebooting or else fetch at specified time
   {  
 	fetchDataNow();
     fetchOnce = false;
@@ -442,7 +440,7 @@ void getApiData()
   if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
   {
     fetchDataNow();
-  } 
+  }
 }
 void fetchDataNow()
 {
@@ -459,6 +457,7 @@ void fetchDataNow()
       Serial.println("Error on HTTP request");
     }
 }
+
 void setup()
 {
   Serial.begin(115200);
@@ -491,10 +490,12 @@ void setup()
   lcd.init();
   lcd.backlight();
   audio_SD_setup();
+  
   timer = timerBegin(0, 80, true);                
-  timerAttachInterrupt(timer, &onTime, true);    
+  timerAttachInterrupt(timer, &onTime, true);        
   timerAlarmWrite(timer, 3000000, true);  //Every 3 seconds         
   timerAlarmEnable(timer);
+ 
 }
 
 void loop()
@@ -503,11 +504,15 @@ void loop()
   printDateTime(rtctime);
   if (intCounter >0)
   {
-    portENTER_CRITICAL(&timerMux);
+	  portENTER_CRITICAL(&timerMux);
        intCounter--;
-    portEXIT_CRITICAL(&timerMux);
-      getApiData();
+      portEXIT_CRITICAL(&timerMux);
+      Serial.println("Timer working");
+      ///////
+      getApiData(); 
       pushData = true;
+      //////
+      
   }
   if ((WiFi.status() != WL_CONNECTED))
   {
@@ -527,7 +532,7 @@ void loop()
   counter = 0;
   if ((WiFi.status() == WL_CONNECTED))
   {
-    getApiData();
+   getApiData();
   }
   client.end();
   delay(2000);
