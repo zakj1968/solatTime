@@ -149,7 +149,6 @@ void compareSolatTime(int prayerTime[][3], RtcDateTime &time)
   if (prayerTime[1][0] - 1 == time.Hour())
   {
     azanNow(0); // Azan 1 hour before subuh
-
   }
 
   if (subuhIndex == 1)
@@ -302,7 +301,6 @@ PrIntData1D processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
-
   //const  char*  date = doc["prayer_times"]["date"]; /
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
@@ -397,7 +395,6 @@ PrIntData1D processApiData(String payload)
 
 void dataPool(PrIntData1D *ptr)
 {
-
   int Hr = ptr->prHr;
   int Minute = ptr->prMinute;
   int ndx = ptr->prNdx;
@@ -465,13 +462,13 @@ void dataPool(PrIntData1D *ptr)
   timerTick = true;
   if (timerTick)
   {
-    compareSolatTime(prTime, timenow); // checking prayer time every 3 seconds
+    compareSolatTime(prTime, timenow); //comparing prayer time with rtc time every 3 seconds
     timerTick = !timerTick;
   }
 }
 String getApiData(bool fetchOnce)
 {
-  if (fetchOnce) //fetch when rebooting or else fetch at specified time
+  if (fetchOnce) //fetch when rebooting or else fetch at specified time. set to true too if require complete sequence of data processing
   {
     fetchOnce = false;
     client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
@@ -585,6 +582,7 @@ void loop()
   {
     String payloadStr;
     PrIntData1D prData2;
+    //Need to do this to avoid system crash if new data fetching from API exceed the limit
     if (fetchOnce)
     {
       fetchOnce = false;
@@ -594,7 +592,7 @@ void loop()
       dataPool(&prData2);
     }
     else
-    { // else, take the data and keep pushed the data;
+    { // else, id there is no new data, take the existing data and keep pushing them out. Otherwise we may miss azan at solat time.
       dataPool(&prData2);
     }
   }
