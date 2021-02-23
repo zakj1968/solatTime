@@ -1,10 +1,10 @@
-# solatTime
-A muslim solat (prayer) time application running on ESP32. 
+# solatTime (Muslim Prayer Time) for ESP32
+A muslim solat (prayer) time application running on ESP32. Solat API is for Malaysia solat time, the data crawlled from JAKIM. The data is in JSON format.
 List of Hardware:
 1. ESP32
-2. SD card reader 
-3. DS3231
-4. LCD (2004)
+2. SD card reader. I am using DIY Sd card adapter by soldering the pins directly on to the adapter.
+3. DS3231 for time recording.
+4. LCD (2004) for text display.
 5. MAX98357A - I2S decoder and amplifier
 6. Speaker (4 ohm or more)
 7. Characteristics:
