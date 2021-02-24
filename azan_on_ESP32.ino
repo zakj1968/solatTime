@@ -182,27 +182,22 @@ void setup_rtc()
   {
     if (Rtc.LastError() != 0)
     {
-      Serial.print("RTC communications error = ");
       Serial.println(Rtc.LastError());
     }
     else
     {
-      Serial.println("RTC lost confidence in the DateTime!");
-
       Rtc.SetDateTime(compiled);
     }
   }
 
   if (!Rtc.GetIsRunning())
   {
-    Serial.println("RTC was not actively running, starting now");
     Rtc.SetIsRunning(true);
   }
 
   RtcDateTime now = Rtc.GetDateTime();
   if (now < compiled)
   {
-    Serial.println("RTC is older than compile time!  (Updating DateTime)");
     Rtc.SetDateTime(compiled);
   }
   else if (now > compiled)
@@ -229,7 +224,7 @@ void audio_SD_setup()
   }
   Serial.println("SD OK");
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
-  audio.setVolume(20); // 0...21
+  audio.setVolume(21); // 0...21
 }
 
 PrIntData1D processApiData(String payload)
