@@ -1,11 +1,11 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include <ArduinoJson.h> 
+#include <ArduinoJson.h>
 #include <LiquidCrystal_I2C.h>
-#include <NTPClient.h> 
+#include <NTPClient.h>
 #include <WiFiUdp.h>
 #include <Wire.h>
-#include <RtcDS3231.h> 
+#include <RtcDS3231.h>
 /////////////////Audio
 #include "Arduino.h"
 #include "Audio.h" //https://github.com/schreibfaul1/ESP32-audioI2S
@@ -26,7 +26,7 @@
 #define I2S_BCLK 27
 #define I2S_LRC 26
 
-TaskHandle_t Task1; 
+TaskHandle_t Task1;
 Audio audio;
 RtcDS3231<TwoWire> Rtc(Wire);
 WiFiUDP ntpUDP;
@@ -35,8 +35,8 @@ HTTPClient client;
 hw_timer_t *timer = NULL;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-const char *ssid = "wifi-ssid";
-const char *password = "wifi-password";
+const char *ssid = "your-wifi-ssid";
+const char *password = "your-wifi-password";
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
@@ -47,7 +47,7 @@ int counter = 0; // For restarting ESP
 
 struct PrIntData1D
 {
-  int imHr, imMin, suHr, suMin, zoHr, zoMin, asHr, asMin, maHr, maMin, isHr, isMin;
+  int imHr, imMin, imNdx, suHr, suMin, suNdx, zoHr, zoMin, zoNdx, asHr, asMin, asNdx, maHr, maMin, maNdx, isHr, isMin, isNdx;
 };
 
 void IRAM_ATTR onTime()
@@ -68,75 +68,79 @@ void audioLoop(void *pvParameters)
     TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
     TIMERG0.wdt_feed = 1;
     TIMERG0.wdt_wprotect = 0;
-    audio.loop(); 
+    audio.loop();
   }
 }
-void compareSolatTime(int prayerTime[][2], RtcDateTime &time)
+bool compareSolatTime(int prayerTime[][3], RtcDateTime &time)
 {
-  int ndx;
-
-  switch (ndx)
+  int i, j, iNdx;
+  for (i = 0; i < 6; i++)
   {
-  case 0:
-  {
-    if ((prayerTime[1][0] - 1) == time.Hour())
+    for (j = 0; j < 3; j++)
     {
-      audio.connecttoFS(SD, "/your-audio-file.wav");
+      if (time.Hour() > 12)
+      {
+        prayerTime[i][0] += 12;
+      }
+      if (prayerTime[i][0] == time.Hour() && prayerTime[i][1] == time.Minute())
+      {
+        if ((prayerTime[0][0] - 1) == time.Hour() && (prayerTime[0][1] == time.Minute()))
+        {
+          return true; // Azan 1 hour before subuh
+        }
+        iNdx = prayerTime[i][2];
+        showMessage(iNdx);
+        return true;
+      }
+      else
+      {
+        return false;
+      }
     }
   }
-  break;
+}
+void showMessage(int indx)
+{
+  switch (indx)
+  {
   case 1:
   {
-    if (((prayerTime[1][0] == time.Hour()) && (prayerTime[1][1] == time.Minute())))
-    {
-      audio.connecttoFS(SD, "/your-audio-file.wav");
-    }
+    char waktuSolat[] = "Subuh";
+    display(waktuSolat);
   }
   break;
   case 2:
   {
-    if (time.Hour() > 12)
-    {
-      prayerTime[2][0] += 12;
-    }
-    if ((prayerTime[2][0] == time.Hour()) && (prayerTime[2][1] == time.Minute()))
-    {
-      audio.connecttoFS(SD, "/your-audio-file.wav");
-    }
+    char waktuSolat[] = "Zohor";
+    display(waktuSolat);
   }
   break;
   case 3:
   {
-    prayerTime[3][0] += 12;
-    if ((prayerTime[3][0] == time.Hour()) && (prayerTime[3][1] == time.Minute()))
-    {
-      audio.connecttoFS(SD, "/your-audio-file.wav");
-    }
+    char waktuSolat[] = "Asar";
+    display(waktuSolat);
   }
-  break;
   case 4:
   {
-    prayerTime[4][0] += 12;
-    if ((prayerTime[4][0] == time.Hour()) && (prayerTime[4][1] == time.Minute()))
-    {
-      audio.connecttoFS(SD, "/your-audio-file.wav");
-    }
+    char waktuSolat[] = "Maghrib";
+    display(waktuSolat);
   }
-  break;
   case 5:
   {
-    prayerTime[5][0] += 12;
-    if ((prayerTime[5][0] == time.Hour()) && (prayerTime[5][1] == time.Minute()))
-    {
-      audio.connecttoFS(SD,"/your-audio-file.wav");
-    }
+    char waktuSolat[] = "Isyak";
+    display(waktuSolat);
   }
-  break;
-  default:
-    Serial.println("Invalid index");
-    break;
   }
-  Serial.println("Not a Prayer Time Yet");
+}
+void display(char msg[])
+{
+  lcd.clear();
+  lcd.setCursor(2, 2);
+  for (uint32_t tStart = millis(); (millis() - tStart) < 3000;)
+  {
+    lcd.print("Waktu Solat ");
+    lcd.print(msg);
+  }
 }
 void printDateTime(const RtcDateTime &dt)
 {
@@ -166,8 +170,8 @@ void setup_rtc()
   Serial.println();
 
   if (!Rtc.IsDateTimeValid())
-  {  
-      Rtc.SetDateTime(compiled);
+  {
+    Rtc.SetDateTime(compiled);
   }
   if (!Rtc.GetIsRunning())
   {
@@ -196,14 +200,10 @@ void audio_SD_setup()
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(21); // 0...21
 }
-
 PrIntData1D processApiData(String payload)
 {
-
   payload.replace(" ", "");
-
   StaticJsonDocument<550> doc;
-
   DeserializationError err = deserializeJson(doc, payload);
   if (err)
   {
@@ -269,6 +269,7 @@ PrIntData1D processApiData(String payload)
   {
     char *arr = prTimeArr[i];
     byte length = strlen(arr);
+    int ndx = i;
 
     if (length)
     {
@@ -291,25 +292,31 @@ PrIntData1D processApiData(String payload)
     int Hr_int = atoi(HrChar);
     int Min_int = atoi(MinChar);
 
-    int HrMinArr[] = {Hr_int, Min_int};
+    int HrMinArr[] = {Hr_int, Min_int, ndx};
 
-    for (int j = 0; j < 2; j++)
+    for (int j = 0; j < 3; j++)
     {
       prArr[i][j] = HrMinArr[j];
     }
   }
   prData1.imHr = prArr[0][0];
   prData1.imMin = prArr[0][1];
+  prData1.imNdx = prArr[0][2];
   prData1.suHr = prArr[1][0];
   prData1.suMin = prArr[1][1];
+  prData1.suNdx = prArr[1][2];
   prData1.zoHr = prArr[2][0];
   prData1.zoMin = prArr[2][1];
+  prData1.zoNdx = prArr[2][2];
   prData1.asHr = prArr[3][0];
   prData1.asMin = prArr[3][1];
+  prData1.asNdx = prArr[3][2];
   prData1.maHr = prArr[4][0];
   prData1.maMin = prArr[4][1];
+  prData1.maNdx = prArr[4][2];
   prData1.isHr = prArr[5][0];
   prData1.isMin = prArr[5][1];
+  prData1.isNdx = prArr[5][2];
 
   return prData1;
 }
@@ -317,29 +324,41 @@ void dataPool(PrIntData1D *ptr)
 {
   int iHr = ptr->imHr;
   int iMin = ptr->imMin;
+  int iNdx = ptr->imNdx;
   int sHr = ptr->suHr;
   int sMin = ptr->suMin;
+  int sNdx = ptr->suNdx;
   int zHr = ptr->zoHr;
   int zMin = ptr->zoMin;
+  int zNdx = ptr->zoNdx;
   int aHr = ptr->asHr;
   int aMin = ptr->asMin;
+  int aNdx = ptr->asNdx;
   int mHr = ptr->maHr;
   int mMin = ptr->maMin;
-  int iyHr = ptr->isHr;
-  int iyMin = ptr->isMin;
+  int mNdx = ptr->maNdx;
+  int isyHr = ptr->isHr;
+  int isyMin = ptr->isMin;
+  int isyNdx = ptr->isNdx;
   RtcDateTime timenow = Rtc.GetDateTime();
-  int prTime[6][2] = {
-      {iHr, iMin},
-      {sHr, sMin},
-      {zHr, zMin},
-      {aHr, aMin},
-      {mHr, mMin},
-      {iyHr, iyMin}};
-  
+  int prTime[6][3] = {
+      {iHr, iMin, iNdx},
+      {sHr, sMin, sNdx},
+      {zHr, zMin, zNdx},
+      {aHr, aMin, aNdx},
+      {mHr, mMin, mNdx},
+      {isyHr, isyMin, isyNdx}};
   timerTick = true;
   if (timerTick)
   {
-    compareSolatTime(prTime, timenow); 
+    if (compareSolatTime(prTime, timenow))
+    {
+      audio.connecttoFS(SD, "/your-audio-file.wav");
+    }
+    else
+    {
+      Serial.println("Not Solat Time yet");
+    }
     timerTick = !timerTick;
   }
 }
@@ -362,6 +381,7 @@ String getApiData(bool fetchOnce)
     }
     fetchOnce = false;
   }
+
   RtcDateTime timeNow = Rtc.GetDateTime();
   if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
   {
@@ -458,7 +478,7 @@ void loop()
       dataPool(&prData2);
     }
     else
-    { 
+    {
       dataPool(&prData2);
     }
   }
