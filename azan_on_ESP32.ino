@@ -42,7 +42,7 @@ const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 volatile int intCounter;
 bool fetchOnce;
-static bool timerTick;
+bool timerTick;
 int counter = 0; // For restarting ESP
 
 struct PrIntData1D
