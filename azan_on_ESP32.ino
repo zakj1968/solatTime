@@ -77,6 +77,13 @@ int *p;
 int indx1,indx2,indx3,indx4,indx5;
 for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
 { 
+	if (time.Hour() >12)
+	{
+		*(p+6) += 12;
+		*(p+9) += 12;
+		*(p+12) += 12;
+		*(p+15) += 12;
+	}
 	 if (*(p)-1 == time.Hour()){ // 1 hr before subuh
 		return true;
 	 }else if (*(p+3) == time.Hour() && *(p+4) == time.Minute()){//Subuh
