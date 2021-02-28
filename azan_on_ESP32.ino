@@ -74,7 +74,6 @@ void audioLoop(void *pvParameters)
 bool compareSolatTime(int prayerTime[][3], RtcDateTime &time)
 {	
 int *p;
-int indx1,indx2,indx3,indx4,indx5;
 for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
 { 
 	if (time.Hour() >12)
@@ -87,72 +86,19 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
 	 if (*(p)-1 == time.Hour()){ // 1 hr before subuh
 		return true;
 	 }else if (*(p+3) == time.Hour() && *(p+4) == time.Minute()){//Subuh
-		 indx1 = *(p+5);
-		 showMessage(indx1);
 		 return true;	
 	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute()){//Zohor
-		 indx2 = *(p+8);
-		 showMessage(indx2);
 		 return true;		
 	 }else if (*(p+9) == time.Hour() && *(p+10) == time.Minute()){//Asar
-		 indx3 = *(p+11);
-		 showMessage(indx3);
 		 return true;	
 	 }else if (*(p+12) == time.Hour() && *(p+13) == time.Minute()){ //Maghrib
-		 indx4 = *(p+14);
-		 showMessage(indx4);
 		 return true;	
 	 }else if (*(p+15) == time.Hour() && *(p+16) == time.Minute()){ //isyak
-		 indx5 = *(p+17);
-		 showMessage(indx5);
 		 return true;	
 	 }else{
 		 return false;
 	 }	
 	}
-}
-void showMessage(int indx)
-{
-  switch (indx)
-  {
-  case 1:
-  {
-    char waktuSolat[] = "Subuh";
-    display(waktuSolat);
-  }
-  break;
-  case 2:
-  {
-    char waktuSolat[] = "Zohor";
-    display(waktuSolat);
-  }
-  break;
-  case 3:
-  {
-    char waktuSolat[] = "Asar";
-    display(waktuSolat);
-  }
-  case 4:
-  {
-    char waktuSolat[] = "Maghrib";
-    display(waktuSolat);
-  }
-  case 5:
-  {
-    char waktuSolat[] = "Isyak";
-    display(waktuSolat);
-  }
-  }
-}
-void display(char msg[])
-{
-  lcd.clear();
-  lcd.setCursor(2, 2);
-  for (uint32_t tStart = millis(); (millis() - tStart) < 3000;)
-  {
-    lcd.print("Waktu Solat ");
-    lcd.print(msg);
-  }
 }
 void printDateTime(const RtcDateTime &dt)
 {
