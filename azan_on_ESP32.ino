@@ -72,32 +72,37 @@ void audioLoop(void *pvParameters)
   }
 }
 bool compareSolatTime(int prayerTime[][3], RtcDateTime &time)
-{
-  int i, j, iNdx;
-  for (i = 0; i < 6; i++)
-  {
-    for (j = 0; j < 3; j++)
-    {
-      if (time.Hour() > 12)
-      {
-        prayerTime[i][0] += 12;
-      }
-      if (prayerTime[i][0] == time.Hour() && prayerTime[i][1] == time.Minute())
-      {
-        if ((prayerTime[0][0] - 1) == time.Hour() && (prayerTime[0][1] == time.Minute()))
-        {
-          return true; // Azan 1 hour before subuh
-        }
-        iNdx = prayerTime[i][2];
-        showMessage(iNdx);
-        return true;
-      }
-      else
-      {
-        return false;
-      }
-    }
-  }
+{	
+int *p;
+int indx1,indx2,indx3,indx4,indx5;
+for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
+{ 
+	 if (*(p)-1 == time.Hour()){ // 1 hr before subuh
+		return true;
+	 }else if (*(p+3) == time.Hour() && *(p+4) == time.Minute()){//Subuh
+		 indx1 = *(p+5);
+		 showMessage(indx1);
+		 return true;	
+	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute()){//Zohor
+		 indx2 = *(p+8);
+		 showMessage(indx2);
+		 return true;		
+	 }else if (*(p+9) == time.Hour() && *(p+10) == time.Minute()){//Asar
+		 indx3 = *(p+11);
+		 showMessage(indx3);
+		 return true;	
+	 }else if (*(p+12) == time.Hour() && *(p+13) == time.Minute()){ //Maghrib
+		 indx4 = *(p+14);
+		 showMessage(indx4);
+		 return true;	
+	 }else if (*(p+15) == time.Hour() && *(p+16) == time.Minute()){ //isyak
+		 indx5 = *(p+17);
+		 showMessage(indx5);
+		 return true;	
+	 }else{
+		 return false;
+	 }	
+	}
 }
 void showMessage(int indx)
 {
@@ -200,8 +205,10 @@ void audio_SD_setup()
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(21); // 0...21
 }
+
 PrIntData1D processApiData(String payload)
 {
+
   payload.replace(" ", "");
   StaticJsonDocument<550> doc;
   DeserializationError err = deserializeJson(doc, payload);
@@ -353,11 +360,11 @@ void dataPool(PrIntData1D *ptr)
   {
     if (compareSolatTime(prTime, timenow))
     {
-      audio.connecttoFS(SD, "/your-audio-file.wav");
+      audio.connecttoFS(SD, "/azan_mekah_2_stereo.wav");
     }
     else
     {
-      Serial.println("Not Solat Time yet");
+      Serial.println("Not solat time yet");
     }
     timerTick = !timerTick;
   }
