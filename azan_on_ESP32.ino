@@ -32,9 +32,6 @@ RtcDS3231<TwoWire> Rtc(Wire);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 HTTPClient client;
-hw_timer_t *timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-
 const char *ssid = "your-wifi-ssid";
 const char *password = "your-wifi-password";
 const uint8_t lcdColumns = 20;
@@ -42,20 +39,12 @@ const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 volatile int intCounter;
 bool fetchOnce;
-bool timerTick;
 int counter = 0; // For restarting ESP
 
 struct PrIntData1D
 {
   int imHr, imMin, imNdx, suHr, suMin, suNdx, zoHr, zoMin, zoNdx, asHr, asMin, asNdx, maHr, maMin, maNdx, isHr, isMin, isNdx;
 };
-
-void IRAM_ATTR onTime()
-{
-  portENTER_CRITICAL_ISR(&timerMux);
-  intCounter++;
-  portEXIT_CRITICAL_ISR(&timerMux);
-}
 void pinToCore()
 {
   xTaskCreatePinnedToCore(audioLoop, "Task1", 10000, NULL, 1, &Task1, 0);
@@ -308,19 +297,12 @@ void dataPool(PrIntData1D *ptr)
       {aHr, aMin, aNdx},
       {mHr, mMin, mNdx},
       {isyHr, isyMin, isyNdx}};
-  timerTick = true;
-  if (timerTick)
-  {
-    if (compareSolatTime(prTime, timenow))
-    {
-      audio.connecttoFS(SD, "/azan_mekah_2_stereo.wav");
-    }
-    else
-    {
-      Serial.println("Not solat time yet");
-    }
-    timerTick = !timerTick;
-  }
+ if (compareSolatTime(prTime, timenow))
+ {
+    audio.connecttoFS(SD, "/your-azan-file.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
+    }else{
+     Serial.println("Not Solat Time yet");
+ }
 }
 String getApiData(bool fetchOnce)
 {
@@ -392,25 +374,12 @@ void setup()
   lcd.init();
   lcd.backlight();
   audio_SD_setup();
-
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTime, true);
-  timerAlarmWrite(timer, 3000000, true); //Every 3 seconds
-  timerAlarmEnable(timer);
-  timerTick = false;
   fetchOnce = true;
 }
 void loop()
 {
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
-  if (intCounter > 0)
-  {
-    portENTER_CRITICAL(&timerMux);
-    intCounter--;
-    portEXIT_CRITICAL(&timerMux);
-    timerTick = true;
-  }
   if ((WiFi.status() != WL_CONNECTED))
   {
     WiFi.begin(ssid, password);
