@@ -72,7 +72,7 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
 		*(p+12) += 12;
 		*(p+15) += 12;
 	}
-	 if (*(p)-1 == time.Hour()){ // 1 hr before subuh
+	 if (*(p+3)-1 == time.Hour()){ // 1 hr before subuh
 		return true;
 	 }else if (*(p+3) == time.Hour() && *(p+4) == time.Minute()){//Subuh
 		 return true;	
