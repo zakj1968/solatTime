@@ -71,16 +71,19 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
 		*(p+9) += 12;
 		*(p+12) += 12;
 		*(p+15) += 12;
+		pm = true;
+	}else{
+		pm = false;
 	}
-	 if (*(p+3) == time.Hour() && *(p+4) == time.Minute()){//Subuh
+	 if (*(p+3) == time.Hour() && *(p+4) == time.Minute() && pm == false){//Subuh
 		 return true;	
-	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute()){//Zohor
+	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute() && pm == true){//Zohor
 		 return true;		
-	 }else if (*(p+9) == time.Hour() && *(p+10) == time.Minute()){//Asar
+	 }else if (*(p+9) == time.Hour() && *(p+10) == time.Minute() && pm == true){//Asar
 		 return true;	
-	 }else if (*(p+12) == time.Hour() && *(p+13) == time.Minute()){ //Maghrib
+	 }else if (*(p+12) == time.Hour() && *(p+13) == time.Minute() && pm == true){ //Maghrib
 		 return true;	
-	 }else if (*(p+15) == time.Hour() && *(p+16) == time.Minute()){ //isyak
+	 }else if (*(p+15) == time.Hour() && *(p+16) == time.Minute() && pm == true){ //isyak
 		 return true;	
 	 }else{
 		 return false;
