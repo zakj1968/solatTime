@@ -63,6 +63,7 @@ void audioLoop(void *pvParameters)
 bool compareSolatTime(int prayerTime[][3], RtcDateTime &time)
 {	
 int *p;
+bool pm ;
 for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
 { 
 	if (time.Hour() >12)
