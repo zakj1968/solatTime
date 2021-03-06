@@ -37,13 +37,12 @@ const char *password = "your-wifi-password";
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
-volatile int intCounter;
 bool fetchOnce;
 int counter = 0; // For restarting ESP
 
-struct PrIntData1D
+struct PrData
 {
-  int imHr, imMin, imNdx, suHr, suMin, suNdx, zoHr, zoMin, zoNdx, asHr, asMin, asNdx, maHr, maMin, maNdx, isHr, isMin, isNdx;
+  int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
 };
 void pinToCore()
 {
@@ -60,31 +59,31 @@ void audioLoop(void *pvParameters)
     audio.loop();
   }
 }
-bool compareSolatTime(int prayerTime[][3], RtcDateTime &time)
+bool compareSolatTime(int prayerTime[][2], RtcDateTime &time)
 {	
 int *p;
 bool pm ;
-for (p=&prayerTime[0][0]; p<= &prayerTime[5][2]; p++)
+for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 { 
 	if (time.Hour() >12)
 	{
+		*(p+4) += 12;
 		*(p+6) += 12;
-		*(p+9) += 12;
-		*(p+12) += 12;
-		*(p+15) += 12;
+		*(p+8) += 12;
+		*(p+10) += 12;
 		pm = true;
 	}else{
 		pm = false;
 	}
-	 if (*(p+3) == time.Hour() && *(p+4) == time.Minute() && pm == false){//Subuh
+	 if (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false){//Subuh
 		 return true;	
-	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute() && pm == true){//Zohor
+	 }else if (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true){//Zohor
 		 return true;		
-	 }else if (*(p+9) == time.Hour() && *(p+10) == time.Minute() && pm == true){//Asar
+	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute() && pm == true){//Asar
 		 return true;	
-	 }else if (*(p+12) == time.Hour() && *(p+13) == time.Minute() && pm == true){ //Maghrib
+	 }else if (*(p+8) == time.Hour() && *(p+9) == time.Minute() && pm == true){ //Maghrib
 		 return true;	
-	 }else if (*(p+15) == time.Hour() && *(p+16) == time.Minute() && pm == true){ //isyak
+	 }else if (*(p+10) == time.Hour() && *(p+11) == time.Minute() && pm == true){ //isyak
 		 return true;	
 	 }else{
 		 return false;
@@ -150,7 +149,7 @@ void audio_SD_setup()
   audio.setVolume(21); // 0...21
 }
 
-PrIntData1D processApiData(String payload)
+PrData processApiData(String payload)
 {
 
   payload.replace(" ", "");
@@ -215,13 +214,11 @@ PrIntData1D processApiData(String payload)
   int i, j;
   int HrMinArr[3];
   int prArr[6][3];
-  PrIntData1D prData1;
+  PrData prData1;
   for (i = 0; i < 6; i++)
   {
     char *arr = prTimeArr[i];
     byte length = strlen(arr);
-    int ndx = i;
-
     if (length)
     {
       arr[length - 2] = '\0';
@@ -243,62 +240,49 @@ PrIntData1D processApiData(String payload)
     int Hr_int = atoi(HrChar);
     int Min_int = atoi(MinChar);
 
-    int HrMinArr[] = {Hr_int, Min_int, ndx};
+    int HrMinArr[] = {Hr_int, Min_int};
 
-    for (int j = 0; j < 3; j++)
+    for (int j = 0; j < 2; j++)
     {
       prArr[i][j] = HrMinArr[j];
     }
   }
   prData1.imHr = prArr[0][0];
   prData1.imMin = prArr[0][1];
-  prData1.imNdx = prArr[0][2];
   prData1.suHr = prArr[1][0];
   prData1.suMin = prArr[1][1];
-  prData1.suNdx = prArr[1][2];
   prData1.zoHr = prArr[2][0];
   prData1.zoMin = prArr[2][1];
-  prData1.zoNdx = prArr[2][2];
   prData1.asHr = prArr[3][0];
   prData1.asMin = prArr[3][1];
-  prData1.asNdx = prArr[3][2];
   prData1.maHr = prArr[4][0];
   prData1.maMin = prArr[4][1];
-  prData1.maNdx = prArr[4][2];
   prData1.isHr = prArr[5][0];
   prData1.isMin = prArr[5][1];
-  prData1.isNdx = prArr[5][2];
-
   return prData1;
 }
-void dataPool(PrIntData1D *ptr)
+void dataPool(PrData *ptr)
 {
   int iHr = ptr->imHr;
   int iMin = ptr->imMin;
-  int iNdx = ptr->imNdx;
   int sHr = ptr->suHr;
   int sMin = ptr->suMin;
-  int sNdx = ptr->suNdx;
   int zHr = ptr->zoHr;
   int zMin = ptr->zoMin;
-  int zNdx = ptr->zoNdx;
   int aHr = ptr->asHr;
   int aMin = ptr->asMin;
-  int aNdx = ptr->asNdx;
   int mHr = ptr->maHr;
   int mMin = ptr->maMin;
-  int mNdx = ptr->maNdx;
   int isyHr = ptr->isHr;
   int isyMin = ptr->isMin;
-  int isyNdx = ptr->isNdx;
   RtcDateTime timenow = Rtc.GetDateTime();
-  int prTime[6][3] = {
-      {iHr, iMin, iNdx},
-      {sHr, sMin, sNdx},
-      {zHr, zMin, zNdx},
-      {aHr, aMin, aNdx},
-      {mHr, mMin, mNdx},
-      {isyHr, isyMin, isyNdx}};
+  int prTime[6][2] = {
+      {iHr, iMin},
+      {sHr, sMin},
+      {zHr, zMin},
+      {aHr, aMin},
+      {mHr, mMin},
+      {isyHr, isyMin}};
  if (compareSolatTime(prTime, timenow))
  {
     audio.connecttoFS(SD, "/your-azan-file.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
@@ -400,7 +384,7 @@ void loop()
   if ((WiFi.status() == WL_CONNECTED))
   {
     String payloadStr;
-    PrIntData1D prData2;
+    PrData prData2;
     if (fetchOnce)
     {
       fetchOnce = false;
