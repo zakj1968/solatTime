@@ -6,6 +6,11 @@
 #include <WiFiUdp.h>
 #include <Wire.h>
 #include <RtcDS3231.h>
+//////////
+#include <SPIFFS.h>
+#include <ESPAsyncWebServer.h>
+#include <ESPmDNS.h>
+#include <WebSocketsServer.h>
 /////////////////Audio
 #include "Arduino.h"
 #include "Audio.h" //https://github.com/schreibfaul1/ESP32-audioI2S
@@ -32,14 +37,116 @@ RtcDS3231<TwoWire> Rtc(Wire);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 HTTPClient client;
+//WiFi network credential
 const char *ssid = "your-wifi-ssid";
 const char *password = "your-wifi-password";
+//ESP32 as a softAP credential
+const char *soft_ap_ssid = "ESP32SoftAP";
+const char *soft_ap_password = "your-password"; //or leave it blank
+
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 bool fetchOnce;
 int counter = 0; // For restarting ESP
 
+// asyncwebserver webserver
+AsyncWebserver webserver(80);
+// websocket object
+WebSocketsServer websockets = WebSocketsServer(81);
+///////////////
+void websockets_setup()
+{
+	websockets.begin();
+	websockets.onEvent(onWebSocketEvent);
+}
+void onWebSocketEvent(uint8_t client_num,WStype_t type,uint8_t * payload,size_t length)
+{
+	switch (type){
+		
+		case WStype_CONNECTED:
+		{
+			 IPAddress ip = webSocket.remoteIP(client_num);
+			 Serial.printf("[%u] Connection from ", client_num);
+			 Serial.println(ip.toString());
+		}
+		break;
+		case WStype_DISCONNECTED:
+		{
+			Serial.printf("[%u] Disconnected!\n", client_num);
+		}
+		break;
+		
+	    case WStype_TEXT:
+	    {	
+			Serial.printf("[%u] Received text: %s\n", client_num, payload);
+			if ( strcmp((char *)payload, "choice") == 1 ) {
+				Serial.println("Choice no. 1");
+				// read Quran index 1 
+			} else if ( strcmp((char *)payload, "choice") == 2 ) {
+				Serial.println("Choice no. 2");
+				//Read Quran index 2
+			} else if (strcmp((char *)payload, "choice") == 3 ){
+				Serial.println("Choice no. 3");
+				//Read Quran index 3
+			} esle if (strcmp((char *)payload, "choice") == 4){
+				Serial.println("Choice no. 4");
+				//Read Quran index 4
+			}else{
+        Serial.println("[%u] Message not recognized");
+      }
+		}     
+      break;
+	}
+}
+void notFound(AsyncWebServerRequest  *request ){
+	request->send(404,"text/plain","Not Found");
+}
+void webserver_setup()
+{
+	if (MDNS.begin("ESP"))
+	{//esp.local
+		serial.println("MDNS responder started");
+	}else{
+		Serial.println("Error setting up MDNS responder!");
+      //  while(1) {
+       //     delay(1000);
+      //  }
+	}
+	
+	webserver.on("/",[](AsyncWebServerRequest *request)
+	{
+		String message = "Hello world";
+		request->send(200,"text/html",message);
+	});
+	//webserver.on("/page1",HTTP_GET,[](AsyncWebServerRequest *request)
+	//{
+		//String message = "Welcome to page1";
+		//request->send(200,"text/plain",message);
+	//});
+	webserver.onNotFound(notFound);
+	webserver.begin();
+}
+void spiffs_setup()
+{
+	if(!SPIFFS.begin(true)){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  } 
+  File file = SPIFFS.open("/index.html");
+  if(!file){
+    Serial.println("Failed to open file for reading");
+    return;
+  }
+  
+  Serial.println("File Content:");
+  while(file.available()){
+    Serial.write(file.read());
+  }
+  file.close();
+}
+
+////////////
 struct PrData
 {
   int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
@@ -361,6 +468,12 @@ void setup()
   lcd.backlight();
   audio_SD_setup();
   fetchOnce = true;
+  //////////////
+  spiffs_setup();
+  wifi_setup();
+  webserver_setup();
+  websockets_setup();	
+ ////////////
 }
 void loop()
 {
