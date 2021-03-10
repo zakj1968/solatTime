@@ -8,11 +8,11 @@ List of Hardware:
 5. MAX98357A - I2S decoder and amplifier
 6. Speaker (4 ohm or more)
 7. Future feature addition:
-  9.1: Parameters for WiFi and solat API parameters setup via web-based (websocket) interface. 
-  9.2: Integration with Raspberry Pi.
+  7.1: Parameters for WiFi and solat API parameters setup via web-based (websocket) interface. 
+  7.2: Integration with Raspberry Pi.
 
 Note: 
-1. Update your ESP32 arduino core to version 1.05 as audio library require it to compile.
+1. Update your ESP32 arduino core to at least version 1.05 as audio library require it to compile.
 2. For audio file, download any azan audio file you prefer and convert them (using Audacity software or any online audio converter) to wav file. I have not tested
  with other audio file format. Make sampling rate 16000 Hz and stereo. Save them on your SD card.
 3. Make sure to fill up your wifi credentials and name of your audio file in the code.
