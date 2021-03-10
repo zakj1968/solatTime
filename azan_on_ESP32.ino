@@ -161,7 +161,7 @@ PrData processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
-  //const  char*  date = doc["prayer_times"]["date"]; /
+  //const  char*  date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
   //const  char*  syuruk = doc["prayer_times"]["syuruk"]; // not enough display space
@@ -212,8 +212,8 @@ PrData processApiData(String payload)
 
   char *prTimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
   int i, j;
-  int HrMinArr[3];
-  int prArr[6][3];
+  int HrMinArr[2];
+  int prArr[6][2];
   PrData prData1;
   for (i = 0; i < 6; i++)
   {
