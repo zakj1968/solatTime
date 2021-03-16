@@ -50,15 +50,77 @@ LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 bool fetchOnce;
 int counter = 0; // For restarting ESP
 
-// asyncwebserver webserver
 AsyncWebserver webserver(80);
-// websocket object
 WebSocketsServer websockets = WebSocketsServer(81);
+char *filename = "/config.txt";
 ///////////////
-void websockets_setup()
+struct Config
 {
-	websockets.begin();
-	websockets.onEvent(onWebSocketEvent);
+	char ssid[30];
+	char pw[15];
+	char code[8];
+};
+Config config;
+void wifi_connection()
+{
+  WiFi.begin(config.ssid, config.pw);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+    counter++;
+    if (counter >= 120)
+    {
+      Serial.println("Restart the board");
+      ESP.restart();
+    }
+  }
+  counter = 0;
+  Serial.println('\n');
+  Serial.println("Connection established!");
+  Serial.print("IP address:\t");
+  Serial.println(WiFi.localIP());
+}
+void getSettingParams(char *filename) {
+  File file = SPIFFS.open(filename);
+  StaticJsonDocument<100>doc;
+  DeserializationError err = deserializeJson(doc,file);
+  if (err)
+  {
+	  Serial.print(F("deserializeJson failed"));
+	  Serial.println(err.c_str());
+  } 
+  strlcpy(config.ssid,doc["wifiSsid"],sizeof(config.ssid));
+  strlcpy(config.pw,doc["wifiPw"],sizeof(config.pw));
+  strlcpy(config.code,doc["code"],sizeof(config.code));
+  file.close();
+  wifi_connection();
+  
+}
+void saveSettingParams(char *filename, char *payloadData){
+  
+  File file = SPIFFS.open(filename, FILE_WRITE);
+  if (!file) {
+    Serial.println(F("Failed to open file"));
+    return;
+  }
+  file.print(payloadData); //payload already in serialized form?
+  file.close();
+}
+oid printFile(char *filename) {
+  File file = SPIFFS.open(filename);
+  if (!file) {
+    Serial.println(F("Failed to read file"));
+    return;
+  }
+
+  // Extract each characters by one by one
+  while (file.available()) {
+    Serial.print((char)file.read());
+  }
+  Serial.println();
+  file.close();
 }
 void onWebSocketEvent(uint8_t client_num,WStype_t type,uint8_t * payload,size_t length)
 {
@@ -77,73 +139,22 @@ void onWebSocketEvent(uint8_t client_num,WStype_t type,uint8_t * payload,size_t 
 		}
 		break;
 		
-	    case WStype_TEXT:
-	    {	
-			Serial.printf("[%u] Received text: %s\n", client_num, payload);
-			if ( strcmp((char *)payload, "choice") == 1 ) {
-				Serial.println("Choice no. 1");
-				// read Quran index 1 
-			} else if ( strcmp((char *)payload, "choice") == 2 ) {
-				Serial.println("Choice no. 2");
-				//Read Quran index 2
-			} else if (strcmp((char *)payload, "choice") == 3 ){
-				Serial.println("Choice no. 3");
-				//Read Quran index 3
-			} esle if (strcmp((char *)payload, "choice") == 4){
-				Serial.println("Choice no. 4");
-				//Read Quran index 4
-			}else{
-        Serial.println("[%u] Message not recognized");
-      }
-		}     
-      break;
+	   	case WStype_TEXT:
+	    	{	
+			 Serial.printf("[%u] get Text: %s\n", num, payload);
+      			 char payloadData[80];
+      			 strcpy(payloadData,(char*)payload);
+	  		 saveSettingParams(filename,payloadData);
+     	        }   
+               break;
 	}
 }
-void notFound(AsyncWebServerRequest  *request ){
-	request->send(404,"text/plain","Not Found");
+void onIndexRequest(AsyncWebServerRequest *request) {
+  request->send(SPIFFS, "/index.html", "text/html");
 }
-void webserver_setup()
-{
-	if (MDNS.begin("ESP"))
-	{//esp.local
-		serial.println("MDNS responder started");
-	}else{
-		Serial.println("Error setting up MDNS responder!");
-      //  while(1) {
-       //     delay(1000);
-      //  }
-	}
-	
-	webserver.on("/",[](AsyncWebServerRequest *request)
-	{
-		String message = "Hello world";
-		request->send(200,"text/html",message);
-	});
-	//webserver.on("/page1",HTTP_GET,[](AsyncWebServerRequest *request)
-	//{
-		//String message = "Welcome to page1";
-		//request->send(200,"text/plain",message);
-	//});
-	webserver.onNotFound(notFound);
-	webserver.begin();
+void onPageNotFound(AsyncWebServerRequest *request) {
+  request->send(404, "text/plain", "Not found");
 }
-void spiffs_setup()
-{
-	if(!SPIFFS.begin(true)){
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
-  } 
-  File file = SPIFFS.open("/index.html");
-  if(!file){
-    Serial.println("Failed to open file for reading");
-    return;
-  }
-  
-  Serial.println("File Content:");
-  while(file.available()){
-    Serial.write(file.read());
-  }
-  file.close();
 }
 
 ////////////
@@ -440,25 +451,39 @@ void setup()
   Serial.begin(115200);
   pinToCore();
   setup_rtc();
-  WiFi.disconnect(true);
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-    counter++;
-    if (counter >= 120)
-    {
-      Serial.println("Restart the board");
-      ESP.restart();
-    }
+  if( !SPIFFS.begin()){
+    Serial.println("Error mounting SPIFFS");
+    while(1);
   }
-  counter = 0;
-  Serial.println('\n');
-  Serial.println("Connection established!");
-  Serial.print("IP address:\t");
-  Serial.println(WiFi.localIP());
+  if (!file)
+  {
+    Serial.println("Failed to open config.txt file");
+  }
+  WiFi.softAP("ESP32AP", "");
+  Serial.println("softAP");
+  Serial.println("");
+  Serial.println(WiFi.softAPIP());
+  File file = SPIFFS.open("/config.txt","r");
+	
+ // WiFi.disconnect(true);
+ // WiFi.begin(ssid, password);
+
+//  while (WiFi.status() != WL_CONNECTED)
+ // {
+ //   delay(500);
+ //   Serial.print(".");
+//    counter++;
+ //   if (counter >= 120)
+//    {
+ //     Serial.println("Restart the board");
+ //     ESP.restart();
+ //   }
+//  }
+//  counter = 0;
+//  Serial.println('\n');
+//  Serial.println("Connection established!");
+ // Serial.print("IP address:\t");
+//  Serial.println(WiFi.localIP());
   timeClient.begin();
   timeClient.setTimeOffset(28800);
   timeClient.update();
@@ -469,10 +494,15 @@ void setup()
   audio_SD_setup();
   fetchOnce = true;
   //////////////
-  spiffs_setup();
-  wifi_setup();
-  webserver_setup();
-  websockets_setup();	
+  webserver.begin();
+  webserver.on("/", HTTP_GET, onIndexRequest);
+  webserver.onNotFound(onPageNotFound); 
+  websocket.begin();
+  websocket.onEvent(onWebSocketEvent);
+   
+  getSettingParams(filename);
+  
+  printFile(filename);
  ////////////
 }
 void loop()
@@ -511,5 +541,6 @@ void loop()
     }
   }
   client.end();
+  websocket.loop();
   delay(2000);
 }
