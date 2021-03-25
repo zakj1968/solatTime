@@ -9,8 +9,8 @@
 //////////
 #include <SPIFFS.h>
 #include <ESPAsyncWebServer.h>
-#include <ESPmDNS.h>
 #include <WebSocketsServer.h>
+#include <AsyncTCP.h>
 /////////////////Audio
 #include "Arduino.h"
 #include "Audio.h" //https://github.com/schreibfaul1/ESP32-audioI2S
@@ -37,12 +37,6 @@ RtcDS3231<TwoWire> Rtc(Wire);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 HTTPClient client;
-//WiFi network credential
-const char *ssid = "your-wifi-ssid";
-const char *password = "your-wifi-password";
-//ESP32 as a softAP credential
-const char *soft_ap_ssid = "ESP32SoftAP";
-const char *soft_ap_password = "your-password"; //or leave it blank
 
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
@@ -51,19 +45,15 @@ bool fetchOnce;
 int counter = 0; // For restarting ESP
 
 AsyncWebserver webserver(80);
-WebSocketsServer websockets = WebSocketsServer(81);
+WebSocketsServer websocket = WebSocketsServer(81);
 char *filename = "/config.txt";
-///////////////
-struct Config
+const char *filename = "/config.txt";
+char apiCode[10];
+bool wifi_connection(const char *ssid,const char *pw)
 {
-	char ssid[30];
-	char pw[15];
-	char code[8];
-};
-Config config;
-void wifi_connection()
-{
-  WiFi.begin(config.ssid, config.pw);
+ 
+  WiFi.mode(WIFI_MODE_STA);
+  WiFi.begin(ssid,pw);
 
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -72,8 +62,8 @@ void wifi_connection()
     counter++;
     if (counter >= 120)
     {
-      Serial.println("Restart the board");
-      ESP.restart();
+      Serial.println("Failed WiFi connection STA mode. Enabling AP mode..");
+      return false;
     }
   }
   counter = 0;
@@ -81,73 +71,110 @@ void wifi_connection()
   Serial.println("Connection established!");
   Serial.print("IP address:\t");
   Serial.println(WiFi.localIP());
+  return true;
 }
-void getSettingParams(char *filename) {
+
+void wifi_AP_mode()
+{
+   Serial.println("WiFi AP mode started!");
+   WiFi.disconnect(true);       
+   WiFi.softAP("ESP32AP", "");
+   Serial.println("softAP");
+   Serial.println(WiFi.softAPIP());  	  
+   webserver.begin();
+   webserver.on("/", HTTP_GET, onIndexRequest);
+   webserver.onNotFound(onPageNotFound); 
+   websocket.begin();
+   websocket.onEvent(onWebSocketEvent); 	  
+}
+
+void loadConfigData(const char *filename) {
   File file = SPIFFS.open(filename);
+  if (!file) {
+    Serial.println("Failed to open file");
+    return;
+  }
   StaticJsonDocument<100>doc;
   DeserializationError err = deserializeJson(doc,file);
   if (err)
   {
-	  Serial.print(F("deserializeJson failed"));
+	  Serial.print("deserializeJson failed");
 	  Serial.println(err.c_str());
+	  Serial.println("WiFi AP mode started!");
+	  wifi_AP_mode();
   } 
-  strlcpy(config.ssid,doc["wifiSsid"],sizeof(config.ssid));
-  strlcpy(config.pw,doc["wifiPw"],sizeof(config.pw));
-  strlcpy(config.code,doc["code"],sizeof(config.code));
-  file.close();
-  wifi_connection();
-  
-}
-void saveSettingParams(char *filename, char *payloadData){
-  
-  File file = SPIFFS.open(filename, FILE_WRITE);
-  if (!file) {
-    Serial.println(F("Failed to open file"));
-    return;
+  const char *ssidDat = doc["ssid"];
+  const char *pwDat = doc["pw"];
+  const char *codeDat = doc["zone"];
+  if (codeDat)
+  {
+	  strlcpy(apiCode,codeDat,sizeof(apiCode));
+  }else{
+	  strcpy(apiCode,"N/A");
   }
-  file.print(payloadData); //payload already in serialized form?
   file.close();
+  if (wifi_connection(ssidDat,pwDat))
+  {
+	  Serial.println("WiFi STA mode started!");
+  }else{
+	  Serial.println("WiFi AP mode started!");
+	  wifi_AP_mode();
+  }   
 }
-oid printFile(char *filename) {
+
+void printFile(const char *filename) {
   File file = SPIFFS.open(filename);
   if (!file) {
     Serial.println(F("Failed to read file"));
     return;
   }
 
-  // Extract each characters by one by one
+  Serial.print("Existing data: ");
   while (file.available()) {
-    Serial.print((char)file.read());
+   Serial.write(file.read());
   }
-  Serial.println();
   file.close();
 }
-void onWebSocketEvent(uint8_t client_num,WStype_t type,uint8_t * payload,size_t length)
-{
-	switch (type){
-		
-		case WStype_CONNECTED:
-		{
-			 IPAddress ip = webSocket.remoteIP(client_num);
-			 Serial.printf("[%u] Connection from ", client_num);
-			 Serial.println(ip.toString());
-		}
-		break;
-		case WStype_DISCONNECTED:
-		{
-			Serial.printf("[%u] Disconnected!\n", client_num);
-		}
-		break;
-		
-	   	case WStype_TEXT:
-	    	{	
-			 Serial.printf("[%u] get Text: %s\n", num, payload);
-      			 char payloadData[80];
-      			 strcpy(payloadData,(char*)payload);
-	  		 saveSettingParams(filename,payloadData);
-     	        }   
-               break;
+
+void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t length) {
+  switch (type) 
+  {
+    case WStype_TEXT:
+    {
+   //   Serial.printf("[%u] get Text: %s\n", num, payload); 
+      char payloadData[80];
+      strcpy(payloadData,(char*)payload);
+   
+      SPIFFS.remove(filename);//Remove file, otherwise data will be appended to file
+      File file = SPIFFS.open(filename,FILE_WRITE);
+      if (!file)
+      {
+		Serial.println(F("Failed to create file"));
+		return;
+	  }
+	 int bytesWritten = file.print(payloadData);
+	 if (bytesWritten >0)
+	 {
+		 Serial.println("Successfully written file");
+		 Serial.print(bytesWritten);
+		 Serial.print(" ");
+		 Serial.print("bytes");
+	 }else{
+		 Serial.println("Write to file failed!");
+	 }
+	 file.close();
+	  
 	}
+	 break;
+	case WStype_CONNECTED: 
+	case WStype_DISCONNECTED:
+    case WStype_ERROR:			
+	case WStype_FRAGMENT_TEXT_START:
+	case WStype_FRAGMENT_BIN_START:
+	case WStype_FRAGMENT:
+	case WStype_FRAGMENT_FIN:
+	break;
+  }
 }
 void onIndexRequest(AsyncWebServerRequest *request) {
   request->send(SPIFFS, "/index.html", "text/html");
@@ -155,9 +182,7 @@ void onIndexRequest(AsyncWebServerRequest *request) {
 void onPageNotFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }
-}
-
-////////////
+//////
 struct PrData
 {
   int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
@@ -455,35 +480,9 @@ void setup()
     Serial.println("Error mounting SPIFFS");
     while(1);
   }
-  if (!file)
-  {
-    Serial.println("Failed to open config.txt file");
-  }
-  WiFi.softAP("ESP32AP", "");
-  Serial.println("softAP");
-  Serial.println("");
-  Serial.println(WiFi.softAPIP());
-  File file = SPIFFS.open("/config.txt","r");
+  printFile(filename);  
+  loadConfigData(filename);  
 	
- // WiFi.disconnect(true);
- // WiFi.begin(ssid, password);
-
-//  while (WiFi.status() != WL_CONNECTED)
- // {
- //   delay(500);
- //   Serial.print(".");
-//    counter++;
- //   if (counter >= 120)
-//    {
- //     Serial.println("Restart the board");
- //     ESP.restart();
- //   }
-//  }
-//  counter = 0;
-//  Serial.println('\n');
-//  Serial.println("Connection established!");
- // Serial.print("IP address:\t");
-//  Serial.println(WiFi.localIP());
   timeClient.begin();
   timeClient.setTimeOffset(28800);
   timeClient.update();
@@ -493,17 +492,6 @@ void setup()
   lcd.backlight();
   audio_SD_setup();
   fetchOnce = true;
-  //////////////
-  webserver.begin();
-  webserver.on("/", HTTP_GET, onIndexRequest);
-  webserver.onNotFound(onPageNotFound); 
-  websocket.begin();
-  websocket.onEvent(onWebSocketEvent);
-   
-  getSettingParams(filename);
-  
-  printFile(filename);
- ////////////
 }
 void loop()
 {
