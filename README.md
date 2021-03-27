@@ -1,5 +1,5 @@
 # solatTime (Muslim Prayer Time) for ESP32
-A muslim solat (prayer) time application running on ESP32. Solat API is for Malaysia solat time. I fetch the prayer data from https:\\api.azanpro.com. It is in JSON format. This app collect the data display them on LCD display and process them to trigger azan audio.
+A muslim solat (prayer) time application running on ESP32. This app uses folat API is for Malaysia solat time, https:\\api.azanpro.com. The data in JSON format. This app collect the data display them on LCD display and process them to trigger azan audio.  The new release has features for setting of wifi and API area code via web browser from pc, phone etc. make the app is more portable. Details of setup in the link below.
 List of Hardware:
 1. ESP32. Any ESP32 will do. However the code won't work with Arduino microcontroller. ESP32 has native support for I2S protocol and dual cores.
 2. SD card reader. I am using DIY Sd card adapter by soldering the pins directly on to the adapter.
@@ -7,9 +7,10 @@ List of Hardware:
 4. LCD (2004) for text display.
 5. MAX98357A - I2S decoder and amplifier
 6. Speaker (4 ohm or more)
-7. Future feature addition:
-  7.1: Parameters for WiFi and solat API parameters setup via web-based (websocket) interface. 
-  7.2: Integration with Raspberry Pi.
+
+Software:
+1. Code as above.
+2. index.html and config.txt files in SPIFFS. Link below describes how to upload the files into SPIFFS of ESP32.
 
 Note: 
 1. Update your ESP32 arduino core to at least version 1.05 as audio library require it to compile.
@@ -22,4 +23,4 @@ Note:
 <img width="411" alt="solatTime" src="https://user-images.githubusercontent.com/78830805/107587834-7532cb00-6c3d-11eb-9ca3-d12b0ef0e7d6.png">
  
 Disclaimer:
-I am just a hobbyist with minimal knowledge on this technology and still in learning mode. Constructive feedbacks are welcome with thank you.
+I am in learning mode. Constructive feedbacks are welcome with thank you.
