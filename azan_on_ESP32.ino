@@ -213,7 +213,6 @@ void setup_rtc()
 {
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-  printDateTime(compiled);
   Serial.println();
 
   if (!Rtc.IsDateTimeValid())
