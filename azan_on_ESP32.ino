@@ -42,13 +42,17 @@ const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 bool fetchOnce;
-int counter = 0; // For restarting ESP
+int counter = 0; //wifi conn countdown
 
-AsyncWebserver webserver(80);
-WebSocketsServer websocket = WebSocketsServer(81);
-char *filename = "/config.txt";
+AsyncWebServer webserver(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
 const char *filename = "/config.txt";
 char apiCode[10];
+
+struct PrData
+{
+  int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
+};
 bool wifi_connection(const char *ssid,const char *pw)
 {
  
@@ -67,10 +71,6 @@ bool wifi_connection(const char *ssid,const char *pw)
     }
   }
   counter = 0;
-  Serial.println('\n');
-  Serial.println("Connection established!");
-  Serial.print("IP address:\t");
-  Serial.println(WiFi.localIP());
   return true;
 }
 
@@ -78,37 +78,32 @@ void wifi_AP_mode()
 {
    Serial.println("WiFi AP mode started!");
    WiFi.disconnect(true);       
-   WiFi.softAP("ESP32AP", "");
-   Serial.println("softAP");
-   Serial.println(WiFi.softAPIP());  	  
+   WiFi.softAP("ESP32AP", "");  
    webserver.begin();
    webserver.on("/", HTTP_GET, onIndexRequest);
    webserver.onNotFound(onPageNotFound); 
-   websocket.begin();
-   websocket.onEvent(onWebSocketEvent); 	  
+   webSocket.begin();
+   webSocket.onEvent(onWebSocketEvent); 	  
 }
 
 void loadConfigData(const char *filename) {
   File file = SPIFFS.open(filename);
   if (!file) {
-    Serial.println("Failed to open file");
     return;
   }
   StaticJsonDocument<100>doc;
   DeserializationError err = deserializeJson(doc,file);
   if (err)
   {
-	  Serial.print("deserializeJson failed");
-	  Serial.println(err.c_str());
-	  Serial.println("WiFi AP mode started!");
-	  wifi_AP_mode();
+	wifi_AP_mode();
   } 
   const char *ssidDat = doc["ssid"];
   const char *pwDat = doc["pw"];
-  const char *codeDat = doc["zone"];
+  const char *codeDat = doc["zone"]; 
   if (codeDat)
   {
 	  strlcpy(apiCode,codeDat,sizeof(apiCode));
+	  
   }else{
 	  strcpy(apiCode,"N/A");
   }
@@ -122,26 +117,11 @@ void loadConfigData(const char *filename) {
   }   
 }
 
-void printFile(const char *filename) {
-  File file = SPIFFS.open(filename);
-  if (!file) {
-    Serial.println(F("Failed to read file"));
-    return;
-  }
-
-  Serial.print("Existing data: ");
-  while (file.available()) {
-   Serial.write(file.read());
-  }
-  file.close();
-}
-
 void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t length) {
   switch (type) 
   {
     case WStype_TEXT:
     {
-   //   Serial.printf("[%u] get Text: %s\n", num, payload); 
       char payloadData[80];
       strcpy(payloadData,(char*)payload);
    
@@ -149,9 +129,9 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
       File file = SPIFFS.open(filename,FILE_WRITE);
       if (!file)
       {
-		Serial.println(F("Failed to create file"));
-		return;
-	  }
+	 return;
+      }
+	 file.print(payloadData);
 	 int bytesWritten = file.print(payloadData);
 	 if (bytesWritten >0)
 	 {
@@ -159,21 +139,15 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 		 Serial.print(bytesWritten);
 		 Serial.print(" ");
 		 Serial.print("bytes");
+		 webSocket.sendTXT(num,"Data save success!");
 	 }else{
 		 Serial.println("Write to file failed!");
+		 webSocket.sendTXT(num,"Data save failed! Please try again.");
 	 }
 	 file.close();
 	  
 	}
 	 break;
-	case WStype_CONNECTED: 
-	case WStype_DISCONNECTED:
-    case WStype_ERROR:			
-	case WStype_FRAGMENT_TEXT_START:
-	case WStype_FRAGMENT_BIN_START:
-	case WStype_FRAGMENT:
-	case WStype_FRAGMENT_FIN:
-	break;
   }
 }
 void onIndexRequest(AsyncWebServerRequest *request) {
@@ -182,11 +156,7 @@ void onIndexRequest(AsyncWebServerRequest *request) {
 void onPageNotFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "Not found");
 }
-//////
-struct PrData
-{
-  int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
-};
+
 void pinToCore()
 {
   xTaskCreatePinnedToCore(audioLoop, "Task1", 10000, NULL, 1, &Task1, 0);
@@ -218,6 +188,7 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 	}else{
 		pm = false;
 	}
+	//What about using abd && def ? true,false
 	 if (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false){//Subuh
 		 return true;	
 	 }else if (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true){//Zohor
@@ -235,12 +206,8 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 }
 void printDateTime(const RtcDateTime &dt)
 {
-  char datestring[11];
   char timestring[10];
-  snprintf_P(datestring, sizeof(datestring), PSTR("%02u/%02u/%04u"), dt.Day(), dt.Month(), dt.Year());
   snprintf_P(timestring, sizeof(timestring), PSTR("%02u:%02u:%02u"), dt.Hour(), dt.Minute(), dt.Second());
-  lcd.setCursor(0, 0);
-  lcd.print(datestring);
   lcd.setCursor(11, 0);
   lcd.print(timestring);
 }
@@ -252,22 +219,16 @@ void RTC_Update()
 }
 void setup_rtc()
 {
-  Serial.print("compiled: ");
-  Serial.print(__DATE__);
-  Serial.println(__TIME__);
+ 
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
-  Serial.println();
 
   if (!Rtc.IsDateTimeValid())
   {
     Rtc.SetDateTime(compiled);
   }
-  if (!Rtc.GetIsRunning())
-  {
-    Rtc.SetIsRunning(true);
-  }
+
   RtcDateTime now = Rtc.GetDateTime();
   if (now < compiled)
   {
@@ -294,7 +255,6 @@ void audio_SD_setup()
 
 PrData processApiData(String payload)
 {
-
   payload.replace(" ", "");
   StaticJsonDocument<550> doc;
   DeserializationError err = deserializeJson(doc, payload);
@@ -304,7 +264,7 @@ PrData processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
-  //const  char*  date = doc["prayer_times"]["date"]; /
+  const char *date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
   //const  char*  syuruk = doc["prayer_times"]["syuruk"]; // not enough display space
@@ -312,6 +272,8 @@ PrData processApiData(String payload)
   const char *asar = doc["prayer_times"]["asar"];
   const char *maghrib = doc["prayer_times"]["maghrib"];
   const char *isyak = doc["prayer_times"]["isyak"];
+  lcd.setCursor(0,0);
+  lcd.print(date);
   lcd.setCursor(0, 1);
   lcd.print("I "); //Imsak
   lcd.setCursor(2, 1);
@@ -355,8 +317,8 @@ PrData processApiData(String payload)
 
   char *prTimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
   int i, j;
-  int HrMinArr[3];
-  int prArr[6][3];
+  int HrMinArr[2];
+  int prArr[6][2];
   PrData prData1;
   for (i = 0; i < 6; i++)
   {
@@ -428,17 +390,23 @@ void dataPool(PrData *ptr)
       {isyHr, isyMin}};
  if (compareSolatTime(prTime, timenow))
  {
-    audio.connecttoFS(SD, "/your-azan-file.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
+    audio.connecttoFS(SD, "/azan.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
     }else{
-     Serial.println("Not Solat Time yet");
+     Serial.println(F("Not Solat Time yet"));
  }
 }
 String getApiData(bool fetchOnce)
 {
+  const char *url1 ="https://api.azanpro.com/times/today.json?zone=";
+  const char *url2 = apiCode;
+  const char *url3 ="&format=12-hour";
+
+  char apiURL[80];
+  snprintf(apiURL, sizeof(apiURL),"%s%s%s",url1,url2,url3);
   if (fetchOnce)
   {
     fetchOnce = false;
-    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    client.begin(apiURL);
     int httpCode = client.GET();
     if (httpCode > 0)
     {
@@ -456,11 +424,11 @@ String getApiData(bool fetchOnce)
   RtcDateTime timeNow = Rtc.GetDateTime();
   if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
   {
-    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    client.begin(apiURL);
     int httpCode = client.GET();
     if (httpCode > 0)
     {
-      fetchOnce = true; // This will enable update sequence of data processing.
+      fetchOnce = true; // enable update sequence of data processing.
       String payload = client.getString();
       payload.replace(" ", "");
       return payload;
@@ -480,7 +448,6 @@ void setup()
     Serial.println("Error mounting SPIFFS");
     while(1);
   }
-  printFile(filename);  
   loadConfigData(filename);  
 	
   timeClient.begin();
@@ -497,21 +464,7 @@ void loop()
 {
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
-  if ((WiFi.status() != WL_CONNECTED))
-  {
-    WiFi.begin(ssid, password);
-  }
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-    counter++;
-    if (counter >= 120)
-    {
-      ESP.restart();
-    }
-  }
-  counter = 0;
+ 
   if ((WiFi.status() == WL_CONNECTED))
   {
     String payloadStr;
@@ -529,6 +482,6 @@ void loop()
     }
   }
   client.end();
-  websocket.loop();
+  webSocket.loop();
   delay(2000);
 }
