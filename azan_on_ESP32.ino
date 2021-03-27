@@ -66,7 +66,6 @@ bool wifi_connection(const char *ssid,const char *pw)
     counter++;
     if (counter >= 120)
     {
-      Serial.println("Failed WiFi connection STA mode. Enabling AP mode..");
       return false;
     }
   }
@@ -76,7 +75,6 @@ bool wifi_connection(const char *ssid,const char *pw)
 
 void wifi_AP_mode()
 {
-   Serial.println("WiFi AP mode started!");
    WiFi.disconnect(true);       
    WiFi.softAP("ESP32AP", "");	  
    webserver.begin();
@@ -112,7 +110,6 @@ void loadConfigData(const char *filename) {
   {
 	  Serial.println("WiFi STA mode started!");
   }else{
-	  Serial.println("WiFi AP mode started!");
 	  wifi_AP_mode();
   }   
 }
@@ -135,14 +132,9 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 	 int bytesWritten = file.print(payloadData);
 	 if (bytesWritten >0)
 	 {
-		 Serial.println("Successfully written file");
-		 Serial.print(bytesWritten);
-		 Serial.print(" ");
-		 Serial.print("bytes");
-		 webSocket.sendTXT(num,"Data save success!");
+		 websocket.sendTXT(num,payloadData);
 	 }else{
-		 Serial.println("Write to file failed!");
-		 webSocket.sendTXT(num,"Data save failed! Please try again.");
+		 websocket.sendTXT(num,"Saving data failed!");
 	 }
 	 file.close();
 	  
@@ -188,7 +180,6 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 	}else{
 		pm = false;
 	}
-	//What about using abd && def ? true,false
 	 if (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false){//Subuh
 		 return true;	
 	 }else if (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true){//Zohor
