@@ -21,13 +21,14 @@ th {
 tr:nth-child(even) {background-color: #f2f2f2;}
 </style>
 <SCRIPT LANGUAGE="JavaScript">
-//https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications
+
 const webSocketConn = new WebSocket("ws://192.168.4.1:81");
 
 function init()
 { 
 	webSocketConn.onerror = function(evt) { onError(evt) };
-	webSocketConn.onopen = function(evt){onOpen(evt)}
+	webSocketConn.onopen = function(evt){onOpen(evt)};
+	webSocketConn.onmessage = function(evt){onMessage(evt)};
 }
 function getFormVal(){
 	 var ssid_Val = document.getElementById("ssid").value;
@@ -45,9 +46,19 @@ function getFormVal(){
 function onError(evt) {
     console.log("ERROR: " + evt.data);
 }
-//attempting to send data only takes place once a connection is established by defining an onopen event handler to do the work:
+
 function onOpen(evt){
 	getFormVal();
+}
+function onMessage(evt){
+	var serverMsg = evt.data;
+	console.log(serverMsg);
+	document.getElementById('srvMsg').style.color = "blue";
+	document.getElementById('srvMsg').innerHTML = serverMsg;
+	
+}
+function frmReset(){
+	document.getElementById("frmParams").reset();
 }
 window.addEventListener("load", init, false);
 </SCRIPT>
@@ -61,8 +72,10 @@ window.addEventListener("load", init, false);
 WiFi ssid:<input type="text" id="ssid" name = "fssid"><br>
 WiFi Password: <input type="text" id="pass" name = "fpass"><br>
 API Zone Code: <input type="text" id="code" name = "fzone"><br>
-<input type="button" name="button" value ="Submit" onClick = "getFormVal()">
+<input type="button" name="submBtn" value ="Submit" onClick = "getFormVal()">
+<input type="button" name="clrBtn" value="Clear" onClick="frmReset()">
+</form>
 </div>
+<p id ="srvMsg"></p>
 </body>
 </html>
-
