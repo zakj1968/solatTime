@@ -6,6 +6,10 @@
 #include <WiFiUdp.h>
 #include <Wire.h>
 #include <RtcDS3231.h>
+#include <SPIFFS.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
+#include <AsyncTCP.h>
 /////////////////Audio
 #include "Arduino.h"
 #include "Audio.h" //https://github.com/schreibfaul1/ESP32-audioI2S
@@ -32,18 +36,120 @@ RtcDS3231<TwoWire> Rtc(Wire);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 HTTPClient client;
-const char *ssid = "your-wifi-ssid";
-const char *password = "your-wifi-password";
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 bool fetchOnce;
-int counter = 0; // For restarting ESP
-
+int counter = 0; // For wifi countdown
+AsyncWebServer webserver(80);
+WebSocketsServer webSocket = WebSocketsServer(81);
+const char *filename = "/config.txt";
+char apiCode[10];
 struct PrData
 {
   int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
 };
+bool wifi_connection(const char *ssid,const char *pw)
+{
+ 
+  WiFi.mode(WIFI_MODE_STA);
+  WiFi.begin(ssid,pw);
+
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+    counter++;
+    if (counter >= 120)
+    {
+      Serial.println("Failed WiFi connection STA mode. Enabling AP mode..");
+      return false;
+    }
+  }
+  counter = 0;
+  return true;
+}
+
+void wifi_AP_mode()
+{
+   WiFi.disconnect(true);       
+   WiFi.softAP("ESP32AP", ""); 
+   webserver.begin();
+   webserver.on("/", HTTP_GET, onIndexRequest);
+   webserver.onNotFound(onPageNotFound); 
+   webSocket.begin();
+   webSocket.onEvent(onWebSocketEvent); 	  
+}
+
+void loadConfigData(const char *filename) {
+  File file = SPIFFS.open(filename);
+  if (!file) {
+    return;
+  }
+  StaticJsonDocument<100>doc;
+  DeserializationError err = deserializeJson(doc,file);
+  if (err)
+  {
+     wifi_AP_mode();
+  } 
+  const char *ssidDat = doc["ssid"];
+  const char *pwDat = doc["pw"];
+  const char *codeDat = doc["zone"]; 
+  if (codeDat)
+  {
+	  strlcpy(apiCode,codeDat,sizeof(apiCode));
+	  
+  }else{
+	  strcpy(apiCode,"N/A");
+  }
+  file.close();
+  if (wifi_connection(ssidDat,pwDat))
+  {
+	  Serial.println("WiFi STA mode started!");
+  }else{
+	  wifi_AP_mode();
+  }   
+}
+
+void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t length) {
+  switch (type) 
+  {
+    case WStype_TEXT:
+    {
+      char payloadData[80];
+      strcpy(payloadData,(char*)payload);
+   
+      SPIFFS.remove(filename);//Remove file, otherwise data will be appended to file
+      File file = SPIFFS.open(filename,FILE_WRITE);
+      if (!file)
+      {
+	return;
+      }
+	 file.print(payloadData);
+	 int bytesWritten = file.print(payloadData);
+	 if (bytesWritten >0)
+	 {
+		 Serial.println("Successfully written file");
+		 Serial.print(bytesWritten);
+		 Serial.print(" ");
+		 Serial.print("bytes");
+		 webSocket.sendTXT(num,"Data save success!");
+	 }else{
+		 Serial.println("Write to file failed!");
+		 webSocket.sendTXT(num,"Data save failed! Please try again.");
+	 }
+	 file.close();	  
+	}
+	 break;
+  }
+}
+void onIndexRequest(AsyncWebServerRequest *request) {
+  request->send(SPIFFS, "/index.html", "text/html");
+}
+void onPageNotFound(AsyncWebServerRequest *request) {
+  request->send(404, "text/plain", "Not found");
+}
+
 void pinToCore()
 {
   xTaskCreatePinnedToCore(audioLoop, "Task1", 10000, NULL, 1, &Task1, 0);
@@ -109,9 +215,6 @@ void RTC_Update()
 }
 void setup_rtc()
 {
-  Serial.print("compiled: ");
-  Serial.print(__DATE__);
-  Serial.println(__TIME__);
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
@@ -120,10 +223,6 @@ void setup_rtc()
   if (!Rtc.IsDateTimeValid())
   {
     Rtc.SetDateTime(compiled);
-  }
-  if (!Rtc.GetIsRunning())
-  {
-    Rtc.SetIsRunning(true);
   }
   RtcDateTime now = Rtc.GetDateTime();
   if (now < compiled)
@@ -151,7 +250,6 @@ void audio_SD_setup()
 
 PrData processApiData(String payload)
 {
-
   payload.replace(" ", "");
   StaticJsonDocument<550> doc;
   DeserializationError err = deserializeJson(doc, payload);
@@ -287,15 +385,21 @@ void dataPool(PrData *ptr)
  {
     audio.connecttoFS(SD, "/your-azan-file.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
     }else{
-     Serial.println("Not Solat Time yet");
+     Serial.println(F("Not Solat Time yet"));
  }
 }
 String getApiData(bool fetchOnce)
 {
+  const char *url1 ="https://api.azanpro.com/times/today.json?zone=";
+  const char *url2 = apiCode;
+  const char *url3 ="&format=12-hour";
+  char apiURL[80];
+  snprintf(apiURL, sizeof(apiURL),"%s%s%s",url1,url2,url3);
+	
   if (fetchOnce)
   {
     fetchOnce = false;
-    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    client.begin(apiURL);
     int httpCode = client.GET();
     if (httpCode > 0)
     {
@@ -333,30 +437,11 @@ void setup()
   Serial.begin(115200);
   pinToCore();
   setup_rtc();
-  WiFi.disconnect(true);
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-    counter++;
-    if (counter >= 120)
-    {
-      Serial.println("Restart the board");
-      ESP.restart();
-    }
-  }
-  counter = 0;
-  Serial.println('\n');
-  Serial.println("Connection established!");
-  Serial.print("IP address:\t");
-  Serial.println(WiFi.localIP());
+  loadConfigData(filename);  
   timeClient.begin();
   timeClient.setTimeOffset(28800);
   timeClient.update();
   RTC_Update();
-
   lcd.init();
   lcd.backlight();
   audio_SD_setup();
@@ -366,21 +451,6 @@ void loop()
 {
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
-  if ((WiFi.status() != WL_CONNECTED))
-  {
-    WiFi.begin(ssid, password);
-  }
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.print(".");
-    counter++;
-    if (counter >= 120)
-    {
-      ESP.restart();
-    }
-  }
-  counter = 0;
   if ((WiFi.status() == WL_CONNECTED))
   {
     String payloadStr;
@@ -398,5 +468,6 @@ void loop()
     }
   }
   client.end();
+  webSocket.loop();
   delay(2000);
 }
