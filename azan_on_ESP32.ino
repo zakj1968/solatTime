@@ -62,7 +62,6 @@ bool wifi_connection(const char *ssid,const char *pw)
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.print(".");
     counter++;
     if (counter >= 120)
     {
@@ -437,7 +436,6 @@ void setup()
   pinToCore();
   setup_rtc();
   if( !SPIFFS.begin()){
-    Serial.println("Error mounting SPIFFS");
     while(1);
   }
   loadConfigData(filename);  
