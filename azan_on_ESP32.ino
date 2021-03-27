@@ -415,7 +415,7 @@ String getApiData(bool fetchOnce)
   RtcDateTime timeNow = Rtc.GetDateTime();
   if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
   {
-    client.begin("https://api.azanpro.com/times/today.json?zone=trg01&format=12-hour");
+    client.begin(apiURL);
     int httpCode = client.GET();
     if (httpCode > 0)
     {
