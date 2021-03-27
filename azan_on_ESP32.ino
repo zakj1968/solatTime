@@ -198,12 +198,8 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 }
 void printDateTime(const RtcDateTime &dt)
 {
-  char datestring[11];
   char timestring[10];
-  snprintf_P(datestring, sizeof(datestring), PSTR("%02u/%02u/%04u"), dt.Day(), dt.Month(), dt.Year());
   snprintf_P(timestring, sizeof(timestring), PSTR("%02u:%02u:%02u"), dt.Hour(), dt.Minute(), dt.Second());
-  lcd.setCursor(0, 0);
-  lcd.print(datestring);
   lcd.setCursor(11, 0);
   lcd.print(timestring);
 }
@@ -267,6 +263,8 @@ PrData processApiData(String payload)
   const char *asar = doc["prayer_times"]["asar"];
   const char *maghrib = doc["prayer_times"]["maghrib"];
   const char *isyak = doc["prayer_times"]["isyak"];
+  lcd.setCursor(0,0);
+  lcd.print(date);
   lcd.setCursor(0, 1);
   lcd.print("I "); //Imsak
   lcd.setCursor(2, 1);
