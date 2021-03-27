@@ -434,6 +434,10 @@ void setup()
   Serial.begin(115200);
   pinToCore();
   setup_rtc();
+  if( !SPIFFS.begin()){
+    Serial.println("Error mounting SPIFFS");
+    while(1);
+  }
   loadConfigData(filename);  
   timeClient.begin();
   timeClient.setTimeOffset(28800);
