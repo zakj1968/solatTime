@@ -6,6 +6,7 @@
 #include <WiFiUdp.h>
 #include <Wire.h>
 #include <RtcDS3231.h>
+//////////
 #include <SPIFFS.h>
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
@@ -36,15 +37,18 @@ RtcDS3231<TwoWire> Rtc(Wire);
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
 HTTPClient client;
+
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
 bool fetchOnce;
-int counter = 0; // For wifi countdown
+int counter = 0; //wifi conn countdown
+
 AsyncWebServer webserver(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 const char *filename = "/config.txt";
 char apiCode[10];
+
 struct PrData
 {
   int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
@@ -72,8 +76,9 @@ bool wifi_connection(const char *ssid,const char *pw)
 
 void wifi_AP_mode()
 {
+   Serial.println("WiFi AP mode started!");
    WiFi.disconnect(true);       
-   WiFi.softAP("ESP32AP", ""); 
+   WiFi.softAP("ESP32AP", "");	  
    webserver.begin();
    webserver.on("/", HTTP_GET, onIndexRequest);
    webserver.onNotFound(onPageNotFound); 
@@ -90,7 +95,7 @@ void loadConfigData(const char *filename) {
   DeserializationError err = deserializeJson(doc,file);
   if (err)
   {
-     wifi_AP_mode();
+	wifi_AP_mode();
   } 
   const char *ssidDat = doc["ssid"];
   const char *pwDat = doc["pw"];
@@ -107,6 +112,7 @@ void loadConfigData(const char *filename) {
   {
 	  Serial.println("WiFi STA mode started!");
   }else{
+	  Serial.println("WiFi AP mode started!");
 	  wifi_AP_mode();
   }   
 }
@@ -123,8 +129,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
       File file = SPIFFS.open(filename,FILE_WRITE);
       if (!file)
       {
-	return;
-      }
+		return;
+	  }
 	 file.print(payloadData);
 	 int bytesWritten = file.print(payloadData);
 	 if (bytesWritten >0)
@@ -138,7 +144,8 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 		 Serial.println("Write to file failed!");
 		 webSocket.sendTXT(num,"Data save failed! Please try again.");
 	 }
-	 file.close();	  
+	 file.close();
+	  
 	}
 	 break;
   }
@@ -181,6 +188,7 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 	}else{
 		pm = false;
 	}
+	//What about using abd && def ? true,false
 	 if (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false){//Subuh
 		 return true;	
 	 }else if (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true){//Zohor
@@ -211,14 +219,16 @@ void RTC_Update()
 }
 void setup_rtc()
 {
+ 
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-  Serial.println();
+  printDateTime(compiled);
 
   if (!Rtc.IsDateTimeValid())
   {
     Rtc.SetDateTime(compiled);
   }
+
   RtcDateTime now = Rtc.GetDateTime();
   if (now < compiled)
   {
@@ -254,7 +264,8 @@ PrData processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
-  const  char*  date = doc["prayer_times"]["date"]; 
+  
+  const char *date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
   //const  char*  syuruk = doc["prayer_times"]["syuruk"]; // not enough display space
@@ -380,7 +391,7 @@ void dataPool(PrData *ptr)
       {isyHr, isyMin}};
  if (compareSolatTime(prTime, timenow))
  {
-    audio.connecttoFS(SD, "/your-azan-file.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
+    audio.connecttoFS(SD, "/azan.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
     }else{
      Serial.println(F("Not Solat Time yet"));
  }
@@ -390,9 +401,9 @@ String getApiData(bool fetchOnce)
   const char *url1 ="https://api.azanpro.com/times/today.json?zone=";
   const char *url2 = apiCode;
   const char *url3 ="&format=12-hour";
+
   char apiURL[80];
   snprintf(apiURL, sizeof(apiURL),"%s%s%s",url1,url2,url3);
-	
   if (fetchOnce)
   {
     fetchOnce = false;
@@ -418,7 +429,7 @@ String getApiData(bool fetchOnce)
     int httpCode = client.GET();
     if (httpCode > 0)
     {
-      fetchOnce = true; // This will enable update sequence of data processing.
+      fetchOnce = true; // enable update sequence of data processing.
       String payload = client.getString();
       payload.replace(" ", "");
       return payload;
@@ -439,10 +450,12 @@ void setup()
     while(1);
   }
   loadConfigData(filename);  
+	
   timeClient.begin();
   timeClient.setTimeOffset(28800);
   timeClient.update();
   RTC_Update();
+
   lcd.init();
   lcd.backlight();
   audio_SD_setup();
@@ -452,6 +465,7 @@ void loop()
 {
   RtcDateTime rtctime = Rtc.GetDateTime();
   printDateTime(rtctime);
+ 
   if ((WiFi.status() == WL_CONNECTED))
   {
     String payloadStr;
