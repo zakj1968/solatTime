@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {
+  background-color: lightblue;
+  color: red;
+}
+table, th, td {
+  border: 1px solid black;
+  text-align: left;
+}
+table {
+  width: 50%;
+  border-collapse: collapse;
+}
+th {
+  background-color: #4CAF50;
+  color: white;
+}
+tr:nth-child(even) {background-color: #f2f2f2;}
+</style>
+<SCRIPT LANGUAGE="JavaScript">
+//https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_client_applications
+const webSocketConn = new WebSocket("ws://192.168.4.1:81");
+
+function init()
+{ 
+	webSocketConn.onerror = function(evt) { onError(evt) };
+	webSocketConn.onopen = function(evt){onOpen(evt)}
+}
+function getFormVal(){
+	 var ssid_Val = document.getElementById("ssid").value;
+	 var pw_Val = document.getElementById("pass").value;
+	 var zone_Val = document.getElementById("code").value;
+	var message = {
+		"ssid":ssid_Val,
+		"pw":pw_Val,
+		"zone":zone_Val
+	}
+	console.log(message);
+	webSocketConn.send(JSON.stringify(message));
+	console.log(message);
+}
+function onError(evt) {
+    console.log("ERROR: " + evt.data);
+}
+//attempting to send data only takes place once a connection is established by defining an onopen event handler to do the work:
+function onOpen(evt){
+	getFormVal();
+}
+window.addEventListener("load", init, false);
+</SCRIPT>
+</head>
+<body>
+<h2>WiFi and API Parameters</h1>
+<h3>Visit https:\\api.azanpro.com to obtain your Zone Code. It is case sensitive.</h2h2>
+<p>Enter your WiFi Credentilas and API Zone Code (e.g trg01 for Kuala Terengganu).</p>
+<div style="overflow-x:auto;">
+<form id = "frmParams" method="GET">
+WiFi ssid:<input type="text" id="ssid" name = "fssid"><br>
+WiFi Password: <input type="text" id="pass" name = "fpass"><br>
+API Zone Code: <input type="text" id="code" name = "fzone"><br>
+<input type="button" name="button" value ="Submit" onClick = "getFormVal()">
+</div>
+</body>
+</html>
+
