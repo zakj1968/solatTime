@@ -161,7 +161,7 @@ PrData processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
-  //const  char*  date = doc["prayer_times"]["date"]; 
+  const  char*  date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
   //const  char*  syuruk = doc["prayer_times"]["syuruk"]; // not enough display space
