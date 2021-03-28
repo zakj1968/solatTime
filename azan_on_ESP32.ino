@@ -135,7 +135,6 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 		char srvMsg[110];
 		snprintf(srvMsg,sizeof(srvMsg),"%s%s",msg,payloadData);
 		webSocket.sendTXT(num,srvMsg);
-		webSocket.sendTXT(num,payloadData);
 	 }else{
 		webSocket.sendTXT(num,"Saving data failed!");
 	 }
