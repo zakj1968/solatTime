@@ -131,7 +131,11 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 	 int bytesWritten = file.print(payloadData);
 	 if (bytesWritten >0)
 	 {
-		 websocket.sendTXT(num,payloadData);
+		const char *msg = "Data save success: ";
+		char srvMsg[110];
+		snprintf(srvMsg,sizeof(srvMsg),"%s%s",msg,payloadData);
+		websocket.sendTXT(num,srvMsg);
+		websocket.sendTXT(num,payloadData);
 	 }else{
 		 websocket.sendTXT(num,"Saving data failed!");
 	 }
