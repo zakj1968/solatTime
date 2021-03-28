@@ -34,14 +34,16 @@ function getFormVal(){
 	 var ssid_Val = document.getElementById("ssid").value;
 	 var pw_Val = document.getElementById("pass").value;
 	 var zone_Val = document.getElementById("code").value;
+	if (ssid_Val == "" || pw_Val == "" || zone_Val == ""){
+		alert("All fields must be filled out!")
+		return false;
+	}	
 	var message = {
 		"ssid":ssid_Val,
 		"pw":pw_Val,
 		"zone":zone_Val
 	}
-	console.log(message);
 	webSocketConn.send(JSON.stringify(message));
-	console.log(message);
 }
 function onError(evt) {
     console.log("ERROR: " + evt.data);
@@ -52,7 +54,6 @@ function onOpen(evt){
 }
 function onMessage(evt){
 	var serverMsg = evt.data;
-	console.log(serverMsg);
 	document.getElementById('srvMsg').style.color = "blue";
 	document.getElementById('srvMsg').innerHTML = serverMsg;
 	
@@ -60,13 +61,14 @@ function onMessage(evt){
 function frmReset(){
 	document.getElementById("frmParams").reset();
 }
+
 window.addEventListener("load", init, false);
 </SCRIPT>
 </head>
 <body>
 <h2>WiFi and API Parameters</h1>
 <h3>Visit https:\\api.azanpro.com to obtain your Zone Code. It is case sensitive.</h2h2>
-<p>Enter your WiFi Credentilas and API Zone Code (e.g trg01 for Kuala Terengganu).</p>
+<p>Enter your WiFi Credentials and API Zone Code (e.g trg01 for Kuala Terengganu).</p>
 <div style="overflow-x:auto;">
 <form id = "frmParams" method="GET">
 WiFi ssid:<input type="text" id="ssid" name = "fssid"><br>
