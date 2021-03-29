@@ -138,10 +138,19 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 	 }else{
 		webSocket.sendTXT(num,"Saving data failed!");
 	 }
-	 file.close();
-	  
+	 file.close();  
 	}
 	 break;
+    case WStype_PING:
+	{
+	Serial.println("Get ping");
+	}
+	break;
+    case WStype_PONG:
+    {
+	Serial.println("Get pong");
+     }
+	break;
   }
 }
 void onIndexRequest(AsyncWebServerRequest *request) {
