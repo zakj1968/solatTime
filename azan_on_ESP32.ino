@@ -63,7 +63,7 @@ bool wifi_connection(const char *ssid,const char *pw)
   {
     delay(500);
     counter++;
-    if (counter >= 120)
+    if (counter >= 60)
     {
       return false;
     }
