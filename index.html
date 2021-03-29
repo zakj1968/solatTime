@@ -24,6 +24,7 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 
 const webSocketConn = new WebSocket("ws://192.168.4.1:81");
 var readyState = webSocketConn.readyState;
+//if connection is open, to keep it alive
 if (readyState === 1){ 
 	setTimeout(heartbeat,500);
 }
@@ -63,7 +64,8 @@ function onMessage(evt){
 	var serverMsg = evt.data;
 	console.log(serverMsg);
 	document.getElementById('srvMsg').style.color = "blue";
-	document.getElementById('srvMsg').innerHTML = serverMsg;	
+	document.getElementById('srvMsg').innerHTML = serverMsg;
+	
 }
 function frmReset(){
 	document.getElementById("frmParams").reset();
@@ -74,12 +76,13 @@ function heartbeat(){
 	if (webSocketConn.readyState !== 1)return;
 	webSocketConn.send("heartbeat");
 }
+
 window.addEventListener("load", init, false);
 </SCRIPT>
 </head>
 <body>
-<h2>WiFi and API Parameters Setup</h1>
-<h3>Visit https:\\api.azanpro.com to obtain your Prayer Zone Code. It is case sensitive.</h2h2>
+<h2>WiFi and API Parameters</h1>
+<h3>Visit https:\\api.azanpro.com to obtain your Zone Code. It is case sensitive.</h2h2>
 <p>Enter your WiFi Credentials and API Zone Code (e.g trg01 for Kuala Terengganu).</p>
 <div style="overflow-x:auto;">
 <form id = "frmParams" method="GET">
