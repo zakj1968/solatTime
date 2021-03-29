@@ -1,4 +1,4 @@
-# solatTime (Muslim Prayer Time) for ESP32
+# ESP32 Audio - Muslim Prayer Time with Azan
 A muslim solat (prayer) time application running on ESP32. This app uses folat API is for Malaysia solat time, https:\\api.azanpro.com. The data in JSON format. This app collect the data display them on LCD display and process them to trigger azan audio.  The new release has features for setting of wifi and API area code via web browser from pc, phone etc. make the app is more portable. Details of setup in the link below.
 List of Hardware:
 1. ESP32. Any ESP32 will do. However the code won't work with Arduino microcontroller. ESP32 has native support for I2S protocol and dual cores.
