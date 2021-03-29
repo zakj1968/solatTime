@@ -23,6 +23,10 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 <SCRIPT LANGUAGE="JavaScript">
 
 const webSocketConn = new WebSocket("ws://192.168.4.1:81");
+var readyState = webSocketConn.readyState;
+if (readyState === 1){ 
+	setTimeout(heartbeat,500);
+}
 
 function init()
 { 
@@ -35,6 +39,7 @@ function getFormVal(){
 	 var pw_Val = document.getElementById("pass").value;
 	 var zone_Val = document.getElementById("code").value;
 	if (ssid_Val == "" || pw_Val == "" || zone_Val == ""){
+		console.log("All fields must be filled out");
 		alert("All fields must be filled out!")
 		return false;
 	}	
@@ -43,7 +48,9 @@ function getFormVal(){
 		"pw":pw_Val,
 		"zone":zone_Val
 	}
+	console.log(message);
 	webSocketConn.send(JSON.stringify(message));
+	console.log(message);
 }
 function onError(evt) {
     console.log("ERROR: " + evt.data);
@@ -54,20 +61,25 @@ function onOpen(evt){
 }
 function onMessage(evt){
 	var serverMsg = evt.data;
+	console.log(serverMsg);
 	document.getElementById('srvMsg').style.color = "blue";
-	document.getElementById('srvMsg').innerHTML = serverMsg;
-	
+	document.getElementById('srvMsg').innerHTML = serverMsg;	
 }
 function frmReset(){
 	document.getElementById("frmParams").reset();
 }
 
+function heartbeat(){
+	if (!webSocketConn)return;
+	if (webSocketConn.readyState !== 1)return;
+	webSocketConn.send("heartbeat");
+}
 window.addEventListener("load", init, false);
 </SCRIPT>
 </head>
 <body>
-<h2>WiFi and API Parameters</h1>
-<h3>Visit https:\\api.azanpro.com to obtain your Zone Code. It is case sensitive.</h2h2>
+<h2>WiFi and API Parameters Setup</h1>
+<h3>Visit https:\\api.azanpro.com to obtain your Prayer Zone Code. It is case sensitive.</h2h2>
 <p>Enter your WiFi Credentials and API Zone Code (e.g trg01 for Kuala Terengganu).</p>
 <div style="overflow-x:auto;">
 <form id = "frmParams" method="GET">
