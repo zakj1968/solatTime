@@ -191,19 +191,11 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 	}else{
 		pm = false;
 	}
-	 if (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false){//Subuh
-		 return true;	
-	 }else if (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true){//Zohor
-		 return true;		
-	 }else if (*(p+6) == time.Hour() && *(p+7) == time.Minute() && pm == true){//Asar
-		 return true;	
-	 }else if (*(p+8) == time.Hour() && *(p+9) == time.Minute() && pm == true){ //Maghrib
-		 return true;	
-	 }else if (*(p+10) == time.Hour() && *(p+11) == time.Minute() && pm == true){ //isyak
-		 return true;	
-	 }else{
-		 return false;
-	 }	
+	return (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false)?true:false;
+	return (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true)?true:false;
+	return (*(p+6) == time.Hour() && *(p+7) == time.Minute() && pm == true)?true:false;
+	return (*(p+8) == time.Hour() && *(p+9) == time.Minute() && pm == true)?true:false;
+	return (*(p+10) == time.Hour() && *(p+11) == time.Minute() && pm == true)?true:false;
 	}
 }
 void printDateTime(const RtcDateTime &dt)
