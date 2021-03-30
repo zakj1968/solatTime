@@ -23,4 +23,4 @@ Note:
 <img width="411" alt="solatTime" src="https://user-images.githubusercontent.com/78830805/107587834-7532cb00-6c3d-11eb-9ca3-d12b0ef0e7d6.png">
  
 Disclaimer:
-I am in learning mode. Constructive feedbacks are welcome with thank you.
+I am a hobbyist in learning mode. Constructive feedbacks are welcome with thank you.
