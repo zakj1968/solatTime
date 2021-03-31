@@ -10,7 +10,7 @@ List of Hardware:
 
 Software:
 1. Code as above.
-2. index.html and config.txt files in SPIFFS (This two files to be placed in data directory in your Arduino IDE project directory). Follow this link to install SPIFFS uploader in your Arduino IDE: https://github.com/me-no-dev/arduino-esp32fs-plugin#:~:text=Make%20sure%20you%20have%20selected,display%20SPIFFS%20Image%20Uploaded%20message.
+2. index.html and config.txt files in SPIFFS (This two files to be placed in data directory in your Arduino IDE project directory). Follow this link to install SPIFFS uploader in your Arduino IDE: https://github.com/me-no-dev/arduino-esp32fs-plugin#:~:text=Make%20sure%20you%20have%20selected,display%20SPIFFS%20Image%20Uploaded%20message. Use index.html file above. The system will auto-create config.txt file or you can create one and upload to SPIFFS together with index.html
 
 Note: 
 1. Use the latest ESP32 arduino core of at least version 1.05 for audio library to compile.
