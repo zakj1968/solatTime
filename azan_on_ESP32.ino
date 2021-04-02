@@ -213,21 +213,9 @@ void RTC_Update()
 }
 void setup_rtc()
 {
- 
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
-
-  if (!Rtc.IsDateTimeValid())
-  {
-    Rtc.SetDateTime(compiled);
-  }
-
-  RtcDateTime now = Rtc.GetDateTime();
-  if (now < compiled)
-  {
-    Rtc.SetDateTime(compiled);
-  }
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
 }
@@ -434,6 +422,14 @@ String getApiData(bool fetchOnce)
     }
   }
 }
+void fetchDataNow()
+{
+   PrData prData2;
+   String payloadStr;
+   payloadStr = getApiData(true); //fetchOnce is true
+   prData2 = processApiData(payloadStr);
+   dataPool(&prData2);
+}
 void setup()
 {
   Serial.begin(115200);
@@ -461,19 +457,19 @@ void loop()
  
   if ((WiFi.status() == WL_CONNECTED))
   {
-    String payloadStr;
     PrData prData2;
     if (fetchOnce)
     {
       fetchOnce = false;
-      payloadStr = getApiData(true); //fetchOnce is true
-      prData2 = processApiData(payloadStr);
+      fetchDataNow();
+    }
+    else{
       dataPool(&prData2);
     }
-    else
-    {
-      dataPool(&prData2);
-    }
+   if(((rtctime.Hour() == 1) && (rtctime.Minute() == 0) && (rtctime.Second() == 0)) || 
+    ((rtctime.Hour() == 12) && (rtctime.Minute() == 1) && (rtctime.Second() == 0))){
+	  fetchDataNow();
+   }
   }
   client.end();
   webSocket.loop();
