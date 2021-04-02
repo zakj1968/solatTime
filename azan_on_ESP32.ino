@@ -403,24 +403,6 @@ String getApiData(bool fetchOnce)
     }
     fetchOnce = false;
   }
-
-  RtcDateTime timeNow = Rtc.GetDateTime();
-  if (((timeNow.Hour() == 1) && (timeNow.Minute() == 0) && (timeNow.Second() == 0)) || ((timeNow.Hour() == 12) && (timeNow.Minute() == 15) && (timeNow.Second() == 0)))
-  {
-    client.begin(apiURL);
-    int httpCode = client.GET();
-    if (httpCode > 0)
-    {
-      fetchOnce = true; // enable update sequence of data processing.
-      String payload = client.getString();
-      payload.replace(" ", "");
-      return payload;
-    }
-    else
-    {
-      Serial.println("Error on HTTP request");
-    }
-  }
 }
 void fetchDataNow()
 {
