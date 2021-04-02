@@ -213,9 +213,21 @@ void RTC_Update()
 }
 void setup_rtc()
 {
+ 
   Rtc.Begin();
   RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
   printDateTime(compiled);
+
+  if (!Rtc.IsDateTimeValid())
+  {
+    Rtc.SetDateTime(compiled);
+  }
+
+  RtcDateTime now = Rtc.GetDateTime();
+  if (now < compiled)
+  {
+    Rtc.SetDateTime(compiled);
+  }
   Rtc.Enable32kHzPin(false);
   Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
 }
@@ -234,7 +246,6 @@ void audio_SD_setup()
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
   audio.setVolume(21); // 0...21
 }
-
 PrData processApiData(String payload)
 {
   payload.replace(" ", "");
@@ -246,6 +257,7 @@ PrData processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
+  
   const char *date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
@@ -310,7 +322,9 @@ PrData processApiData(String payload)
     char *MinChar = newCharStr[1];
     int Hr_int = atoi(HrChar);
     int Min_int = atoi(MinChar);
+
     int HrMinArr[] = {Hr_int, Min_int};
+
     for (int j = 0; j < 2; j++)
     {
       prArr[i][j] = HrMinArr[j];
@@ -385,14 +399,6 @@ String getApiData(bool fetchOnce)
     fetchOnce = false;
   }
 }
-void fetchDataNow()
-{
-   PrData prData2;
-   String payloadStr;
-   payloadStr = getApiData(true); //fetchOnce is true
-   prData2 = processApiData(payloadStr);
-   dataPool(&prData2);
-}
 void setup()
 {
   Serial.begin(115200);
@@ -420,19 +426,23 @@ void loop()
  
   if ((WiFi.status() == WL_CONNECTED))
   {
+    String payloadStr;
     PrData prData2;
+	if ((rtctime.Hour() == 1)  || (rtctime.Hour() == 12))
+	{
+	  fetchOnce = true;    
+	} 
     if (fetchOnce)
     {
       fetchOnce = false;
-      fetchDataNow();
-    }
-    else{
+      payloadStr = getApiData(true); //fetchOnce is true
+      prData2 = processApiData(payloadStr);
       dataPool(&prData2);
     }
-   if(((rtctime.Hour() == 1) && (rtctime.Minute() == 0) && (rtctime.Second() == 0)) || 
-    ((rtctime.Hour() == 12) && (rtctime.Minute() == 0) && (rtctime.Second() == 0))){
-	  fetchDataNow();
-   }
+    else
+    {
+      dataPool(&prData2);
+    }
   }
   client.end();
   webSocket.loop();
