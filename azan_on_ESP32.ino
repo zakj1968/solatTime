@@ -246,7 +246,6 @@ PrData processApiData(String payload)
     Serial.println(err.c_str());
     //return;
   }
-  
   const char *date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
@@ -255,33 +254,19 @@ PrData processApiData(String payload)
   const char *asar = doc["prayer_times"]["asar"];
   const char *maghrib = doc["prayer_times"]["maghrib"];
   const char *isyak = doc["prayer_times"]["isyak"];
-  lcd.setCursor(0,0);
-  lcd.print(date);
-  lcd.setCursor(0, 1);
-  lcd.print("I "); //Imsak
-  lcd.setCursor(2, 1);
-  lcd.print(imsak);
-  lcd.setCursor(10, 1);
-  lcd.print("S "); //Subuh
-  lcd.setCursor(12, 1);
-  lcd.print(subuh);
-  lcd.setCursor(0, 2);
-  lcd.print("Z "); //Zohor
-  lcd.setCursor(2, 2);
-  lcd.print(zohor);
-  lcd.setCursor(10, 2);
-  lcd.print("A "); //Asar
-  lcd.setCursor(12, 2);
-  lcd.print(asar);
-  lcd.setCursor(0, 3);
-  lcd.print("M "); //Maghrib
-  lcd.setCursor(2, 3);
-  lcd.print(maghrib);
-  lcd.setCursor(10, 3);
-  lcd.print("I "); //Isyak
-  lcd.setCursor(12, 3);
-  lcd.print(isyak);
-
+  lcd.setCursor(0,0);lcd.print(date);
+  lcd.setCursor(0, 1);lcd.print("I "); //Imsak
+  lcd.setCursor(2, 1);lcd.print(imsak);
+  lcd.setCursor(10, 1);lcd.print("S "); //Subuh
+  lcd.setCursor(12, 1);lcd.print(subuh);
+  lcd.setCursor(0, 2);lcd.print("Z "); //Zohor
+  lcd.setCursor(2, 2);lcd.print(zohor);
+  lcd.setCursor(10, 2);lcd.print("A "); //Asar
+  lcd.setCursor(12, 2);lcd.print(asar);
+  lcd.setCursor(0, 3);lcd.print("M "); //Maghrib
+  lcd.setCursor(2, 3);lcd.print(maghrib);
+  lcd.setCursor(10, 3);lcd.print("I "); //Isyak
+  lcd.setCursor(12, 3);lcd.print(isyak);
   //char date_t[10];
   char imsak_t[8];
   char subuh_t[8];
@@ -289,7 +274,6 @@ PrData processApiData(String payload)
   char asar_t[8];
   char maghrib_t[8];
   char isyak_t[8];
-
   //strcpy(date_t,date);
   strcpy(imsak_t, imsak);
   strcpy(subuh_t, subuh);
@@ -297,7 +281,6 @@ PrData processApiData(String payload)
   strcpy(asar_t, asar);
   strcpy(maghrib_t, maghrib);
   strcpy(isyak_t, isyak);
-
   char *prTimeArr[] = {imsak_t, subuh_t, zohor_t, asar_t, maghrib_t, isyak_t};
   int i, j;
   int HrMinArr[2];
@@ -327,9 +310,7 @@ PrData processApiData(String payload)
     char *MinChar = newCharStr[1];
     int Hr_int = atoi(HrChar);
     int Min_int = atoi(MinChar);
-
     int HrMinArr[] = {Hr_int, Min_int};
-
     for (int j = 0; j < 2; j++)
     {
       prArr[i][j] = HrMinArr[j];
