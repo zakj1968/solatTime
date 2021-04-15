@@ -63,7 +63,7 @@ bool wifi_connection(const char *ssid,const char *pw)
   {
     delay(500);
     counter++;
-    if (counter >= 60)
+    if (counter >= 15)
     {
       return false;
     }
@@ -75,7 +75,8 @@ bool wifi_connection(const char *ssid,const char *pw)
 void wifi_AP_mode()
 {
    WiFi.disconnect(true);       
-   WiFi.softAP("ESP32AP", "");	  
+   WiFi.softAP("ESP32AP", "");
+   Serial.println(WiFi.softAPIP());	  
    webserver.begin();
    webserver.on("/", HTTP_GET, onIndexRequest);
    webserver.onNotFound(onPageNotFound); 
@@ -88,10 +89,11 @@ void loadConfigData(const char *filename) {
   if (!file) {
     return;
   }
-  StaticJsonDocument<100>doc;
+  StaticJsonDocument<150>doc;
   DeserializationError err = deserializeJson(doc,file);
   if (err)
   {
+	Serial.println("Deserialization Error");
 	wifi_AP_mode();
   } 
   const char *ssidDat = doc["ssid"];
@@ -120,8 +122,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
     {
       char payloadData[80];
       strcpy(payloadData,(char*)payload);
-   
-      SPIFFS.remove(filename);//Remove file, otherwise data will be appended to file
+      SPIFFS.remove(filename);
       File file = SPIFFS.open(filename,FILE_WRITE);
       if (!file)
       {
@@ -136,7 +137,7 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 		snprintf(srvMsg,sizeof(srvMsg),"%s%s",msg,payloadData);
 		webSocket.sendTXT(num,srvMsg);
 	 }else{
-		webSocket.sendTXT(num,"Saving data failed!");
+		webSocket.sendTXT(num,"Fail save data");//Fail save
 	 }
 	 file.close();  
 	}
@@ -151,6 +152,11 @@ void onWebSocketEvent(uint8_t num, WStype_t type,uint8_t * payload, size_t lengt
 	Serial.println("Get pong");
      }
 	break;
+	case WStype_CONNECTED:
+      {
+        webSocket.sendTXT(num,"Connected to ESP32");
+      }
+     break;
   }
 }
 void onIndexRequest(AsyncWebServerRequest *request) {
@@ -175,7 +181,7 @@ void audioLoop(void *pvParameters)
     audio.loop();
   }
 }
-bool compareSolatTime(int prayerTime[][2], RtcDateTime &time)
+int compareSolatTime(int prayerTime[][2], RtcDateTime &time)
 {	
 int *p;
 bool pm ;
@@ -191,11 +197,11 @@ for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 	}else{
 		pm = false;
 	}
-	return (*(p+2) == time.Hour() && *(p+3) == time.Minute() && pm == false)?true: 
-		  (*(p+4) == time.Hour() && *(p+5) == time.Minute() && pm == true)?true:
-		     (*(p+6) == time.Hour() && *(p+7) == time.Minute() && pm == true)?true:
-		        (*(p+8) == time.Hour() && *(p+9) == time.Minute() && pm == true)?true:
-		           (*(p+10) == time.Hour() && *(p+11) == time.Minute() && pm == true)?true:false;
+	 return (*(p + 2) == time.Hour() && *(p + 3) == time.Minute() && pm == false)?1:
+            (*(p + 4) == time.Hour() && *(p + 5) == time.Minute() && pm == true)?2:
+            (*(p + 6) == time.Hour() && *(p + 7) == time.Minute() && pm == true)?3:
+            (*(p + 8) == time.Hour() && *(p + 9) == time.Minute() && pm == true)?4: 
+          (*(p + 10) == time.Hour() && *(p + 11) == time.Minute() && pm == true)?5:0;
 	}
 }
 void printDateTime(const RtcDateTime &dt) 
@@ -330,48 +336,28 @@ PrData processApiData(String payload)
       prArr[i][j] = HrMinArr[j];
     }
   }
-  prData1.imHr = prArr[0][0];
-  prData1.imMin = prArr[0][1];
-  prData1.suHr = prArr[1][0];
-  prData1.suMin = prArr[1][1];
-  prData1.zoHr = prArr[2][0];
-  prData1.zoMin = prArr[2][1];
-  prData1.asHr = prArr[3][0];
-  prData1.asMin = prArr[3][1];
-  prData1.maHr = prArr[4][0];
-  prData1.maMin = prArr[4][1];
-  prData1.isHr = prArr[5][0];
-  prData1.isMin = prArr[5][1];
+  prData1.imHr = prArr[0][0];prData1.imMin = prArr[0][1];
+  prData1.suHr = prArr[1][0];prData1.suMin = prArr[1][1];
+  prData1.zoHr = prArr[2][0];prData1.zoMin = prArr[2][1];
+  prData1.asHr = prArr[3][0];prData1.asMin = prArr[3][1];
+  prData1.maHr = prArr[4][0];prData1.maMin = prArr[4][1];
+  prData1.isHr = prArr[5][0];prData1.isMin = prArr[5][1];
   return prData1;
 }
 void dataPool(PrData *ptr)
 {
-  int iHr = ptr->imHr;
-  int iMin = ptr->imMin;
-  int sHr = ptr->suHr;
-  int sMin = ptr->suMin;
-  int zHr = ptr->zoHr;
-  int zMin = ptr->zoMin;
-  int aHr = ptr->asHr;
-  int aMin = ptr->asMin;
-  int mHr = ptr->maHr;
-  int mMin = ptr->maMin;
-  int isyHr = ptr->isHr;
-  int isyMin = ptr->isMin;
+  int iHr = ptr->imHr;int iMin = ptr->imMin;
+  int sHr = ptr->suHr;int sMin = ptr->suMin;
+  int zHr = ptr->zoHr;int zMin = ptr->zoMin;
+  int aHr = ptr->asHr;int aMin = ptr->asMin;
+  int mHr = ptr->maHr;int mMin = ptr->maMin;
+  int isyHr = ptr->isHr;int isyMin = ptr->isMin;
   RtcDateTime timenow = Rtc.GetDateTime();
   int prTime[6][2] = {
-      {iHr, iMin},
-      {sHr, sMin},
-      {zHr, zMin},
-      {aHr, aMin},
-      {mHr, mMin},
-      {isyHr, isyMin}};
- if (compareSolatTime(prTime, timenow))
- {
-    audio.connecttoFS(SD, "/azan.wav");//Note: Make sure filename is short (8 characters or less, eg. azan.wav)
-    }else{
-     Serial.println(F("Not Solat Time yet"));
- }
+      {iHr, iMin},{sHr, sMin},{zHr, zMin},{aHr, aMin},{mHr, mMin},{isyHr, isyMin}};
+int sCode = compareSolatTime(prTime, timenow);
+sCode == 0 ? Serial.println("Not Solat Time yet") : sCode == 1 ? audio.connecttoFS(SD, "/azSubuh.wav")
+                                                                 : audio.connecttoFS(SD, "/azan.wav");
 }
 String getApiData(bool fetchOnce)
 {
