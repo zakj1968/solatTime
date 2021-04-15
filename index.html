@@ -2,97 +2,133 @@
 <html>
 <head>
 <style>
-body {
-  background-color: lightblue;
-  color: red;
+  input[type=text], select {
+  width: 80%;
+  padding: 12px 20px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid rgb(243, 7, 7);
+  border-radius: 4px;
+  box-sizing: border-box;
 }
-table, th, td {
-  border: 1px solid black;
-  text-align: left;
-}
-table {
-  width: 50%;
-  border-collapse: collapse;
-}
-th {
+
+input[type=submit] {
+  width: 80%;
   background-color: #4CAF50;
   color: white;
+  padding: 14px 20px;
+  margin: 8px 0;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
-tr:nth-child(even) {background-color: #f2f2f2;}
+
+input[type=submit]:hover {
+  background-color: #45a049;
+}
+
+input[type=text]:focus {
+  border: 3px solid #555;
+}
+input[type=button], input[type=submit], input[type=reset] {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 16px 32px;
+  text-decoration: none;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+div {
+  border-radius: 5px;
+  background-color: #f2f2f2;
+  padding: 20px;
+}
+
+body {
+  background-color: rgb(195, 235, 248);
+  color: red;
+}
+form input.error {
+    border-color: #e74c3c
+}
+form input.success {
+    border-color: #c3e6cb
+}
 </style>
-<SCRIPT LANGUAGE="JavaScript">
-
-const webSocketConn = new WebSocket("ws://192.168.4.1:81");
-var readyState = webSocketConn.readyState;
-//if connection is open, to keep it alive
-if (readyState === 1){ 
-	setTimeout(heartbeat,500);
-}
-
+<script>
+var ws;
+var form;
 function init()
 { 
-	webSocketConn.onerror = function(evt) { onError(evt) };
-	webSocketConn.onopen = function(evt){onOpen(evt)};
-	webSocketConn.onmessage = function(evt){onMessage(evt)};
+  wsConnect();
+  form = document.getElementById('frmParams');
+  form.addEventListener('submit',handleForm);
 }
-function getFormVal(){
-	 var ssid_Val = document.getElementById("ssid").value;
-	 var pw_Val = document.getElementById("pass").value;
-	 var zone_Val = document.getElementById("code").value;
-	if (ssid_Val == "" || pw_Val == "" || zone_Val == ""){
-		console.log("All fields must be filled out");
-		alert("All fields must be filled out!")
-		return false;
-	}	
-	var message = {
-		"ssid":ssid_Val,
-		"pw":pw_Val,
-		"zone":zone_Val
+function wsConnect(){
+  ws = new WebSocket('ws://'+location.hostname+':81/');
+  ws.onopen = function(evt){onOpen(evt)}
+  ws.onerror = function(evt) { onError(evt) }
+  ws.onclose = function(evt){onClose(evt)}
+  ws.onmessage = function(evt){onMessage(evt)}	
+}
+async function handleForm(evt){
+  evt.preventDefault();
+  const ssidVal = document.getElementById("frmParams").elements[0].value;
+  const pwVal = document.getElementById("frmParams").elements[1].value;
+  const zoneVal = document.getElementById("frmParams").elements[2].value;
+  
+  if (ssidVal == '' || pwVal == '' || zoneVal == ''){
+    alert('All fields must be filled');
+    event.preventDefault();
+    return false;
+  }
+  var dataMsg = {
+		"ssid":ssidVal,
+		"pw":pwVal,
+		"zone":zoneVal
 	}
-	console.log(message);
-	webSocketConn.send(JSON.stringify(message));
-	console.log(message);
+	console.log(dataMsg);
+	await ws.send(JSON.stringify(dataMsg));
+	console.log(dataMsg);
+}
+function onOpen(evt){
+  console.log('Websocket connection opened!');
 }
 function onError(evt) {
-    console.log("ERROR: " + evt.data);
+    console.log("ERROR: " + evt);
 }
-
-function onOpen(evt){
-	getFormVal();
+function onClose(evt){
+  console.log('Websocket connection closed!')
+  if (evt.wasClean) {
+    alert(`[close] Connection closed cleanly, code=${evt.code} reason=${evt.reason}`);
+  } else {
+    alert('[close] Connection terminated unexpectedly!');
+  }
+	setInterval(()=>{
+       wsConnect();
+  },2000)
 }
 function onMessage(evt){
-	var serverMsg = evt.data;
-	console.log(serverMsg);
-	document.getElementById('srvMsg').style.color = "blue";
-	document.getElementById('srvMsg').innerHTML = serverMsg;
-	
+ 
+  alert(`[message] Response from ESP32: ${evt.data}`);
 }
-function frmReset(){
-	document.getElementById("frmParams").reset();
-}
-
-function heartbeat(){
-	if (!webSocketConn)return;
-	if (webSocketConn.readyState !== 1)return;
-	webSocketConn.send("heartbeat");
-}
-
 window.addEventListener("load", init, false);
-</SCRIPT>
+</script>
 </head>
 <body>
-<h2>WiFi and API Parameters</h1>
-<h3>Visit https:\\api.azanpro.com to obtain your Zone Code. It is case sensitive.</h2h2>
-<p>Enter your WiFi Credentials and API Zone Code (e.g trg01 for Kuala Terengganu).</p>
-<div style="overflow-x:auto;">
-<form id = "frmParams" method="GET">
-WiFi ssid:<input type="text" id="ssid" name = "fssid"><br>
-WiFi Password: <input type="text" id="pass" name = "fpass"><br>
-API Zone Code: <input type="text" id="code" name = "fzone"><br>
-<input type="button" name="submBtn" value ="Submit" onClick = "getFormVal()">
-<input type="button" name="clrBtn" value="Clear" onClick="frmReset()">
-</form>
+<h2>WiFi and API Parameters Setup</h1>
+<p>Enter your WiFi Credentials and API Zone Code (get it from https:\\api.azanpro.com ) below:</p>
+<div id = "container">
+	<form id = "frmParams" method="GET">
+		<small></small>
+		<input type="text" name="ssid" placeholder = "WiFi ssid name"><br>
+		<small></small>
+		<input type="text" name="password" placeholder = "WiFi Password"><br>
+		<small></small>
+		<input type="text" name="zone" placeholder = "Zone Code"><br>
+		<button id="subBtn" type="submit">Send Data</button>		
+	</form>
 </div>
-<p id ="srvMsg"></p>
 </body>
 </html>
