@@ -10,7 +10,7 @@ List of Hardware:
 
 Software:
 1. Code as above.
-2. index.html and config.txt files in SPIFFS (This two files to be placed in data directory in your Arduino IDE project directory). Follow this link to install SPIFFS uploader in your Arduino IDE: https://github.com/me-no-dev/arduino-esp32fs-plugin#:~:text=Make%20sure%20you%20have%20selected,display%20SPIFFS%20Image%20Uploaded%20message. Use index.html file above. The system will auto-create config.txt file or you can create one and upload to SPIFFS together with index.html
+2. index.html in SPIFFS (This file to be placed in data directory in your Arduino IDE project directory). Follow this link to setup SPIFFS and install SPIFFS uploader for your Arduino IDE: https://github.com/me-no-dev/arduino-esp32fs-plugin#:~:text=Make%20sure%20you%20have%20selected,display%20SPIFFS%20Image%20Uploaded%20message. Use index.html file above. The system will auto-create config.txt file.
 
 Note: 
 1. Use the latest ESP32 arduino core of at least version 1.05 for audio library to compile.
@@ -19,6 +19,7 @@ Note:
 3. Your wifi credentials and API zone code no more hard coded. Read in the link below how to enter them via web page from PC or phones etc. This is one-time setup unless you change your wifi and API zone.
 4. Setup description: https://fornextlife.wordpress.com/2021/03/07/muslim-prayer-time-on-esp32/
 5. Video clip: https://www.youtube.com/watch?v=1s4jHMRSESk
+6. NOTE: Version 2.1 intorduces different azan for subuh. You can get it from internet and convert it to wav file (subuh.wav). You can use your file name by changing its name in the code. For reliability please use short 8.3 file name.
  
 <img width="411" alt="solatTime" src="https://user-images.githubusercontent.com/78830805/107587834-7532cb00-6c3d-11eb-9ca3-d12b0ef0e7d6.png">
  
