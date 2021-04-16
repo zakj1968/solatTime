@@ -414,7 +414,7 @@ void loop()
   {
     String payloadStr;
     PrData prData2;
-	if ((rtctime.Hour() == 1 && rtctime.Minute() == 0 && rtctime.Second() == 0) || (rtctime.Hour() == 12 && rtctime.Minute() == 0 && rtctime.Second() == 0) )
+	if ((rtctime.Hour() == 1 && rtctime.Minute() == 0) || (rtctime.Hour() == 12 && rtctime.Minute() == 0))
 	{
 	  fetchOnce = true;    
 	} 
