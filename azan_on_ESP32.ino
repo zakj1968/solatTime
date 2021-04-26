@@ -2,45 +2,40 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <LiquidCrystal_I2C.h>
-#include <NTPClient.h>
-#include <WiFiUdp.h>
 #include <Wire.h>
-#include <RtcDS3231.h>
-//////////
+#include <time.h>
 #include <SPIFFS.h>
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
 #include <AsyncTCP.h>
-/////////////////Audio
 #include "Arduino.h"
 #include "Audio.h" //https://github.com/schreibfaul1/ESP32-audioI2S
 #include "SD.h"
 #include "FS.h"
-/////////////////////
-// to use second core - core 0
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
-////////////////////////////////////
-// SD card pins
+
 #define SD_CS 5
 #define SPI_MOSI 23
 #define SPI_MISO 19
 #define SPI_SCK 18
-//I2S pins
 #define I2S_DOUT 25
 #define I2S_BCLK 27
 #define I2S_LRC 26
 
-TaskHandle_t Task1;
-Audio audio;
-RtcDS3231<TwoWire> Rtc(Wire);
-WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP);
-HTTPClient client;
-
 const uint8_t lcdColumns = 20;
 const uint8_t lcdRows = 4;
+TaskHandle_t Task1;
+Audio audio;
+HTTPClient client;
 LiquidCrystal_I2C lcd(0x27, lcdColumns, lcdRows);
+
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 0;
+const int   daylightOffset_sec = 28800;
+int ntpHr,ntpMin;
+
+
 bool fetchOnce;
 int counter = 0; //wifi conn countdown
 
@@ -48,11 +43,26 @@ AsyncWebServer webserver(80);
 WebSocketsServer webSocket = WebSocketsServer(81);
 const char *filename = "/config.txt";
 char apiCode[10];
-
 struct PrData
 {
   int imHr, imMin,suHr, suMin, zoHr, zoMin,asHr, asMin, maHr, maMin,isHr, isMin;
 };
+void printLocalTime() 
+{	
+   struct tm timeinfo; 
+   if(!getLocalTime(&timeinfo)){ 
+      Serial.println("Failed to obtain time");
+      return;
+   }
+   char timestring[10];
+  strftime(timestring,10,"%I:%M:%S",&timeinfo); 
+  lcd.setCursor(11, 0);
+  lcd.print(timestring);
+  
+  ntpHr = timeinfo.tm_hour;
+  ntpMin = timeinfo.tm_min;
+}
+
 bool wifi_connection(const char *ssid,const char *pw)
 {
  
@@ -63,7 +73,7 @@ bool wifi_connection(const char *ssid,const char *pw)
   {
     delay(500);
     counter++;
-    if (counter >= 15)
+    if (counter >= 10)
     {
       return false;
     }
@@ -110,6 +120,7 @@ void loadConfigData(const char *filename) {
   if (wifi_connection(ssidDat,pwDat))
   {
 	  Serial.println("WiFi STA mode started!");
+	  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);  
   }else{
 	  wifi_AP_mode();
   }   
@@ -181,62 +192,19 @@ void audioLoop(void *pvParameters)
     audio.loop();
   }
 }
-int compareSolatTime(int prayerTime[][2], RtcDateTime &time)
+int compareSolatTime(int prayerTime[][2])
 {	
 int *p;
-bool pm ;
 for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 { 
-	if (time.Hour() >12)
-	{
-		*(p+4) += 12;
-		*(p+6) += 12;
-		*(p+8) += 12;
-		*(p+10) += 12;
-		pm = true;
-	}else{
-		pm = false;
-	}
-	 return (*(p + 2) == time.Hour() && *(p + 3) == time.Minute() && pm == false)?1:
-            (*(p + 4) == time.Hour() && *(p + 5) == time.Minute() && pm == true)?2:
-            (*(p + 6) == time.Hour() && *(p + 7) == time.Minute() && pm == true)?3:
-            (*(p + 8) == time.Hour() && *(p + 9) == time.Minute() && pm == true)?4: 
-          (*(p + 10) == time.Hour() && *(p + 11) == time.Minute() && pm == true)?5:0;
+	 return (*(p + 2) == ntpHr && *(p + 3) == ntpMin)?1:
+            (*(p + 4) == ntpHr && *(p + 5) == ntpMin)?2:
+            (*(p + 6) == ntpHr && *(p + 7) == ntpMin)?3:
+            (*(p + 8) == ntpHr && *(p + 9) == ntpMin)?4: 
+          (*(p + 10) == ntpHr && *(p + 11) == ntpMin)?5:0;
 	}
 }
-void printDateTime(const RtcDateTime &dt) 
-{
-  char timestring[10];
-  snprintf_P(timestring, sizeof(timestring), PSTR("%02u:%02u:%02u"), dt.Hour(), dt.Minute(), dt.Second());
-  lcd.setCursor(11, 0);
-  lcd.print(timestring);
-}
-void RTC_Update()
-{
-  timeClient.update();
-  unsigned long epochTime = timeClient.getEpochTime() - 946684800UL;
-  Rtc.SetDateTime(epochTime);
-}
-void setup_rtc()
-{
- 
-  Rtc.Begin();
-  RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
-  printDateTime(compiled);
 
-  if (!Rtc.IsDateTimeValid())
-  {
-    Rtc.SetDateTime(compiled);
-  }
-
-  RtcDateTime now = Rtc.GetDateTime();
-  if (now < compiled)
-  {
-    Rtc.SetDateTime(compiled);
-  }
-  Rtc.Enable32kHzPin(false);
-  Rtc.SetSquareWavePin(DS3231SquareWavePin_ModeNone);
-}
 void audio_SD_setup()
 {
   pinMode(SD_CS, OUTPUT);
@@ -352,10 +320,10 @@ void dataPool(PrData *ptr)
   int aHr = ptr->asHr;int aMin = ptr->asMin;
   int mHr = ptr->maHr;int mMin = ptr->maMin;
   int isyHr = ptr->isHr;int isyMin = ptr->isMin;
-  RtcDateTime timenow = Rtc.GetDateTime();
+ 
   int prTime[6][2] = {
       {iHr, iMin},{sHr, sMin},{zHr, zMin},{aHr, aMin},{mHr, mMin},{isyHr, isyMin}};
-int sCode = compareSolatTime(prTime, timenow);
+int sCode = compareSolatTime(prTime);
 sCode == 0 ? Serial.println("Not Solat Time yet") : sCode == 1 ? audio.connecttoFS(SD, "/azSubuh.wav")
                                                                  : audio.connecttoFS(SD, "/azan.wav");
 }
@@ -389,32 +357,23 @@ void setup()
 {
   Serial.begin(115200);
   pinToCore();
-  setup_rtc();
   if( !SPIFFS.begin()){
     while(1);
   }
   loadConfigData(filename);  
-	
-  timeClient.begin();
-  timeClient.setTimeOffset(28800);
-  timeClient.update();
-  RTC_Update();
-
   lcd.init();
   lcd.backlight();
   audio_SD_setup();
   fetchOnce = true;
 }
 void loop()
-{
-  RtcDateTime rtctime = Rtc.GetDateTime();
-  printDateTime(rtctime);
- 
+{  
+  printLocalTime();//Print time from internal rtc
   if ((WiFi.status() == WL_CONNECTED))
   {
     String payloadStr;
     PrData prData2;
-	if (rtctime.Hour() == 1 && rtctime.Minute() == 5)
+	if (ntpHr == 1 && ntpMin == 5)
 	{
 	  ESP.restart();   
 	} 
