@@ -3,7 +3,7 @@ A muslim solat (prayer) time application running on ESP32. This app uses folat A
 List of Hardware:
 1. ESP32. Any ESP32 will do. However the code won't work with Arduino microcontroller. ESP32 has native support for I2S protocol and dual cores.
 2. SD card reader. I am using DIY Sd card adapter by soldering the pins directly on to the adapter.
-3. DS3231 for time recording (The NTP time is used to update the DS3231).
+3. DS3231 for time recording (The NTP time is used to update the DS3231). UPDATE 26/4/2021: External rtc no more required.
 4. LCD (2004) for text display.
 5. MAX98357A - I2S decoder and amplifier
 6. Speaker (4 ohm or more)
@@ -20,6 +20,8 @@ Note:
 4. Setup description: https://fornextlife.wordpress.com/2021/03/07/muslim-prayer-time-on-esp32/
 5. Video clip: https://www.youtube.com/watch?v=1s4jHMRSESk
 6. NOTE: Version 2.1 intorduces different azan for subuh. You can get it from internet and convert it to wav file. You can use your file name by changing its name in the code. For reliability please use short 8.3 file name.
+
+UPDATE: Version 2.2 - external rtc is removed.
  
 <img width="411" alt="solatTime" src="https://user-images.githubusercontent.com/78830805/107587834-7532cb00-6c3d-11eb-9ca3-d12b0ef0e7d6.png">
  
