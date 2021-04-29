@@ -8,12 +8,12 @@
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
 #include <AsyncTCP.h>
-#include "Arduino.h"
-#include "Audio.h" //https://github.com/schreibfaul1/ESP32-audioI2S
-#include "SD.h"
-#include "FS.h"
-#include "soc/timer_group_struct.h"
-#include "soc/timer_group_reg.h"
+#include <Arduino.h>
+#include <Audio.h> //https://github.com/schreibfaul1/ESP32-audioI2S
+#include <SD.h>
+#include <FS.h>
+#include <soc/timer_group_struct.h>
+#include <soc/timer_group_reg.h>
 
 #define SD_CS 5
 #define SPI_MOSI 23
@@ -34,7 +34,6 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 28800;
 int ntpHr,ntpMin;
-
 
 bool fetchOnce;
 int counter = 0; //wifi conn countdown
@@ -195,13 +194,20 @@ void audioLoop(void *pvParameters)
 int compareSolatTime(int prayerTime[][2])
 {	
 int *p;
+bool pm;
 for (p=&prayerTime[0][0]; p<= &prayerTime[5][1]; p++)
 { 
-	 return (*(p + 2) == ntpHr && *(p + 3) == ntpMin)?1:
-            (*(p + 4) == ntpHr && *(p + 5) == ntpMin)?2:
-            (*(p + 6) == ntpHr && *(p + 7) == ntpMin)?3:
-            (*(p + 8) == ntpHr && *(p + 9) == ntpMin)?4: 
-          (*(p + 10) == ntpHr && *(p + 11) == ntpMin)?5:0;
+	if (ntpHr > 12){
+		*(p + 4) += 12;*(p + 6) += 12;*(p + 8) += 12;*(p + 10) += 12;		
+		pm = true;
+	}else{
+		pm = false;
+	}
+	 return (*(p + 2) == ntpHr && *(p + 3) == ntpMin && pm == false)?1:
+            (*(p + 4) == ntpHr && *(p + 5) == ntpMin && pm == true)?2:
+            (*(p + 6) == ntpHr && *(p + 7) == ntpMin && pm == true)?3:
+            (*(p + 8) == ntpHr && *(p + 9) == ntpMin && pm == true)?4: 
+          (*(p + 10) == ntpHr && *(p + 11) == ntpMin && pm == true)?5:0;
 	}
 }
 
@@ -214,7 +220,7 @@ void audio_SD_setup()
   {
     Serial.println("Error talking to SD card!");
     while (true)
-      ; // end program
+      ;
   }
   Serial.println("SD OK");
   audio.setPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
@@ -230,12 +236,11 @@ PrData processApiData(String payload)
     Serial.print("ERROR in deserialization JSON");
     Serial.println(err.c_str());
     //return;
-  }
-  
+  } 
   const char *date = doc["prayer_times"]["date"]; 
   const char *imsak = doc["prayer_times"]["imsak"];
   const char *subuh = doc["prayer_times"]["subuh"];
-  //const  char*  syuruk = doc["prayer_times"]["syuruk"]; // not enough display space
+  //const  char*  syuruk = doc["prayer_times"]["syuruk"]; 
   const char *zohor = doc["prayer_times"]["zohor"];
   const char *asar = doc["prayer_times"]["asar"];
   const char *maghrib = doc["prayer_times"]["maghrib"];
@@ -254,12 +259,7 @@ PrData processApiData(String payload)
   lcd.setCursor(10, 3);lcd.print("I "); //Isyak
   lcd.setCursor(12, 3);lcd.print(isyak);
   //char date_t[10];
-  char imsak_t[8];
-  char subuh_t[8];
-  char zohor_t[8];
-  char asar_t[8];
-  char maghrib_t[8];
-  char isyak_t[8];
+  char imsak_t[8],subuh_t[8],zohor_t[8],asar_t[8],maghrib_t[8],isyak_t[8];
   //strcpy(date_t,date);
   strcpy(imsak_t, imsak);
   strcpy(subuh_t, subuh);
@@ -321,11 +321,9 @@ void dataPool(PrData *ptr)
   int mHr = ptr->maHr;int mMin = ptr->maMin;
   int isyHr = ptr->isHr;int isyMin = ptr->isMin;
  
-  int prTime[6][2] = {
-      {iHr, iMin},{sHr, sMin},{zHr, zMin},{aHr, aMin},{mHr, mMin},{isyHr, isyMin}};
-int sCode = compareSolatTime(prTime);
-sCode == 0 ? Serial.println("Not Solat Time yet") : sCode == 1 ? audio.connecttoFS(SD, "/azSubuh.wav")
-                                                                 : audio.connecttoFS(SD, "/azan.wav");
+  int prTime[6][2] = {{iHr, iMin},{sHr, sMin},{zHr, zMin},{aHr, aMin},{mHr, mMin},{isyHr, isyMin}};
+  int sCode = compareSolatTime(prTime);
+  sCode == 0 ? Serial.println("Not Solat Time yet") : sCode == 1 ? audio.connecttoFS(SD, "/azSubuh.wav"): audio.connecttoFS(SD, "/azan.wav"); //create your own audio files
 }
 String getApiData(bool fetchOnce)
 {
@@ -368,14 +366,14 @@ void setup()
 }
 void loop()
 {  
-  printLocalTime();//Print time from internal rtc
+  printLocalTime();
   if ((WiFi.status() == WL_CONNECTED))
   {
     String payloadStr;
     PrData prData2;
-	if (ntpHr == 1 && ntpMin == 5)
+	if ((ntpHr == 1 && ntpMin == 5)||(ntpHr == 12 && ntpMin == 0))
 	{
-	  ESP.restart();   
+	  ESP.restart();  //to update API and NTP data
 	} 
     if (fetchOnce)
     {
