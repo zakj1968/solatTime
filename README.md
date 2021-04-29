@@ -19,7 +19,7 @@ Note:
 3. Your wifi credentials and API zone code no more hard coded. The setup can be done via web page from PC or phones etc. This is one-time setup unless you change your wifi and API zone.
 4. Setup description: https://fornextlife.wordpress.com/2021/03/07/muslim-prayer-time-on-esp32/
 5. Video clip: https://www.youtube.com/watch?v=1s4jHMRSESk
-6. NOTE: You need separate azan for fajr(subuh) and other solat. Create these files in wav format and place them in SD card. In the code I named it as azSubuh.wav and azan.wav respectively. You can change filename as you prefer, but for reliability please use short 8.3 file name.
+6. NOTE: You need separate azan audio files for fajr(subuh) and other solat. Create these files in wav format and place them in SD card. In the code I named it as azSubuh.wav and azan.wav respectively. You can change filename as you prefer, but for reliability please use short 8.3 file name.
 
 # UPDATE: Version 2.2 - external rtc is removed. Time acquired from NTP server.
  
