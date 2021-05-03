@@ -80,7 +80,7 @@ async function handleForm(evt){
   
   if (ssidVal == '' || pwVal == '' || zoneVal == ''){
     alert('All fields must be filled');
-    event.preventDefault();
+    evt.preventDefault();
     return false;
   }
   var dataMsg = {
